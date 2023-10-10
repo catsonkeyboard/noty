@@ -1,5 +1,4 @@
 import { create } from "zustand";
-
 import { NoteProps } from "@/types/notes";
 
 interface NoteState {
