@@ -7,7 +7,7 @@
     "distDir": "../out"
   },
   "package": {
-    "productName": "tauri-nextjs-app",
+    "productName": "noty",
     "version": "0.1.0"
   },
   "tauri": {
