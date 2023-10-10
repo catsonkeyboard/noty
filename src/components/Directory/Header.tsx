@@ -1,11 +1,13 @@
 import { useNoteStore } from "@/store/NoteStore";
 import { PlusIcon } from "lucide-react";
-import { data } from "@/lib/data"
+import { v4 as uuidv4 } from 'uuid';
+import { data } from "@/lib/data";
+import { Dayjs } from "dayjs";
 
 const Header: React.FC = () => {
   const { notes, updateNotes } = useNoteStore();
   const createNote = async () => {
-    updateNotes([ ...notes, { noteId : "", noteNo : 0, title: "Untitled", content: JSON.stringify(data), createdAt: "" }])
+    updateNotes([ ...notes, { noteId : uuidv4(), title: "Untitled", content: JSON.stringify(data), createdAt: "" }])
   }
 
   return (
