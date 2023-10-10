@@ -8,10 +8,11 @@ const List: React.FC = () => {
   const router = useRouter();
   const { notes } = useNoteStore();
   const { activeNoteTitle, setActiveNoteTitle } = useActiveNoteStore();
-  const handleNoteClick = async (noteName: string) => {
+  const handleNoteClick = async (noteId: string) => {
+    console.log(noteId)
     // await appWindow.setTitle(`${noteName.split(".json")[0]} - noty`);
-    setActiveNoteTitle(noteName);
-    router.push(`/${noteName}`);
+    setActiveNoteTitle(noteId);
+    router.push(`/${noteId}`);
   };
 
   return (
@@ -39,8 +40,8 @@ const List: React.FC = () => {
                     "p-1 pl-4 m-2 hover:cursor-pointer hover:bg-accent rounded-lg " +
                     (activeNoteTitle === v.title ? "bg-muted" : "")
                   }
-                  key={v.title}
-                  onClick={() => handleNoteClick(v.title as string)}
+                  key={v.noteId}
+                  onClick={() => handleNoteClick(v.noteId as string)}
                 >
                   {v.title?.split(".json")[0]}
                 </motion.div>

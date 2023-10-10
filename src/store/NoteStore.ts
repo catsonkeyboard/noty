@@ -22,11 +22,10 @@ interface ActiveState {
 export const useActiveNoteStore = create<ActiveState>()((set) => ({
   activeNoteTitle: "",
   activeNote: {
-    content: "",
-    noteNo: -1,
-    createdAt: "",
     noteId: "",
     title: "",
+    content: "",
+    createdAt: "",
   },
   setActiveNoteTitle: (noteName) =>
     set((state) => ({ activeNoteTitle: noteName })),
