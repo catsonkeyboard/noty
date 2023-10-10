@@ -1,8 +1,6 @@
 'use client'
 import { AnimatePresence, motion } from "framer-motion";
-
 import { useUiStore } from "@/store/UiStore";
-
 import Header from "./Header";
 import Notes from "./List";
 
