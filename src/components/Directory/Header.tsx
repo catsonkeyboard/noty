@@ -1,13 +1,30 @@
+import { useState } from "react";
 import { useNoteStore } from "@/store/NoteStore";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon,ArrowLeftFromLine } from "lucide-react";
 import { v4 as uuidv4 } from 'uuid';
 import { data } from "@/lib/data";
 import { Dayjs } from "dayjs";
 
 const Header: React.FC = () => {
   const { notes, updateNotes } = useNoteStore();
+  const [ count, setCount ] = useState(0);  
+  //add new note
   const createNote = async () => {
-    updateNotes([ ...notes, { noteId : uuidv4(), title: "Untitled", content: JSON.stringify(data), createdAt: "" }])
+    const uuid = uuidv4();
+    updateNotes([ ...notes, { noteId : uuid, title: "Untitled-" + count, content: JSON.stringify({
+      time: 1635603431943,
+      blocks: [
+        {
+          id: 'sheNwCUP5A',
+          type: 'header',
+          data: {
+            text: 'Editor.js ' + uuid,
+            level: 2,
+          },
+        }
+      ],
+    }), createdAt: "" }]);
+    setCount(count + 1);
   }
 
   return (

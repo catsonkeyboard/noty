@@ -2,7 +2,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useUiStore } from "@/store/UiStore";
 import Header from "./Header";
-import Notes from "./List";
+import TitleList from "./TitleList";
 
 const Directory: React.FC = () => {
   const { focusMode } = useUiStore();
@@ -22,7 +22,7 @@ const Directory: React.FC = () => {
         >
           <div className="p-6">
             <Header />
-            <Notes />
+            <TitleList />
           </div>
         </motion.section>
       )}
