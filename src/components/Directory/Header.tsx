@@ -11,7 +11,7 @@ const Header: React.FC = () => {
   //add new note
   const createNote = async () => {
     const uuid = uuidv4();
-    updateNotes([ ...notes, { noteId : uuid, title: "Untitled-" + count, content: JSON.stringify({
+    updateNotes([ ...notes, { noteId : uuid, title: "Untitled-" + count, content: {
       time: 1635603431943,
       blocks: [
         {
@@ -23,7 +23,7 @@ const Header: React.FC = () => {
           },
         }
       ],
-    }), createdAt: "" }]);
+    }, createdAt: "" }]);
     setCount(count + 1);
   }
 
