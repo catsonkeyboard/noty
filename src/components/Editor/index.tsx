@@ -10,9 +10,6 @@ type Props = {
 };
 
 const Editor = ({ data, onChange, holder }: Props) => {
-
-  console.log('rendering editor')
-  console.log('data:' + JSON.stringify(data))
   //add a reference to editor
   const ref = useRef<EditorJS>();
 
@@ -23,7 +20,6 @@ const Editor = ({ data, onChange, holder }: Props) => {
       const editor = new EditorJS({
         holder: holder,
         tools: EDITOR_JS_TOOLS,
-        data: data,
         async onChange(api, event) {
           const data = await api.saver.save();
           onChange(data);
@@ -40,7 +36,7 @@ const Editor = ({ data, onChange, holder }: Props) => {
   }, []);
 
   useEffect(() => {
-    if(ref.current && data) {
+    if(ref.current && ref.current.render && data) {
       ref.current.render(data)
     }
   }, [data]);

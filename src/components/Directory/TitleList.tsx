@@ -5,7 +5,6 @@ import { useNoteStore, useActiveNoteStore } from "@/store/NoteStore";
 import { ScrollArea } from "@/components/UI/ScrollArea";
 
 const TitleList: React.FC = () => {
-  console.log("Rendering List");
   const { notes } = useNoteStore();
   const { activeNoteTitle, setActiveNoteTitle } = useActiveNoteStore(state => state);
   const { activeNote, setActiveNote } = useActiveNoteStore(state => state);
