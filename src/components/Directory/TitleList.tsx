@@ -1,22 +1,26 @@
 import { appWindow } from "@tauri-apps/api/window";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useNoteStore, useActiveNoteStore } from "@/store/NoteStore";
+import { ScrollArea } from "@/components/UI/ScrollArea";
 
-const List: React.FC = () => {
-  const router = useRouter();
+const TitleList: React.FC = () => {
+  console.log("Rendering List");
   const { notes } = useNoteStore();
-  const { activeNoteTitle, setActiveNoteTitle } = useActiveNoteStore();
+  const { activeNoteTitle, setActiveNoteTitle } = useActiveNoteStore(state => state);
+  const { activeNote, setActiveNote } = useActiveNoteStore(state => state);
+  const setActiveEditor = useActiveNoteStore(state => state.setActiveEditor);
   const handleNoteClick = async (noteId: string) => {
-    console.log(noteId)
     // await appWindow.setTitle(`${noteName.split(".json")[0]} - noty`);
-    setActiveNoteTitle(noteId);
-    router.push(`/${noteId}`);
+    setActiveNote(notes.filter((v: any) => v.noteId === noteId)[0]);
+    setActiveNoteTitle(notes.filter((v: any) => v.noteId === noteId)[0].title);
+    setActiveEditor(JSON.parse(notes.filter((v: any) => v.noteId === noteId)[0].content));
+    console.log("active note: " + noteId)
   };
 
   return (
-    <div className="mt-10">
+    <div className="mt-5">
+      <ScrollArea>
         <AnimatePresence>
           {notes &&
             notes.map((v, i) => {
@@ -43,13 +47,14 @@ const List: React.FC = () => {
                   key={v.noteId}
                   onClick={() => handleNoteClick(v.noteId as string)}
                 >
-                  {v.title?.split(".json")[0]}
+                  {v.title}
                 </motion.div>
               );
             })}
         </AnimatePresence>
+      </ScrollArea>
     </div>
   );
 };
 
-export default List;
+export default TitleList;

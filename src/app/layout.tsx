@@ -1,8 +1,10 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import { Theme } from '@radix-ui/themes'
-import Directory from '@/components/Directory'
-
+import dynamic from "next/dynamic"
+const Directory = dynamic(() => import("@/components/Directory"), {
+  ssr: false,
+});
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
@@ -22,7 +24,7 @@ export default function RootLayout({
           <main className="relative w-full h-screen flex flex-col bg-primary-foreground select-none overflow-hidden">
             <div className="relative w-full h-full flex">
                 <Directory />
-                <div>{children}</div>
+                {children}
             </div>
           </main>
         </Theme>

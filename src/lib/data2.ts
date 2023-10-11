@@ -1,0 +1,13 @@
+export const data = {
+    time: 1635603431943,
+    blocks: [
+      {
+        id: 'sheNwCUP5A',
+        type: 'header',
+        data: {
+          text: 'Editor.js',
+          level: 2,
+        },
+      }
+    ],
+  };

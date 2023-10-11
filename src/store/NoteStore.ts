@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { NoteProps } from "@/types/notes";
+import { OutputData } from "@editorjs/editorjs";
 
 interface NoteState {
   notes: NoteProps[];
@@ -12,13 +13,18 @@ export const useNoteStore = create<NoteState>()((set) => ({
 }));
 
 interface ActiveState {
+  activeEditor: OutputData;
   activeNoteTitle: string;
   activeNote: NoteProps;
   setActiveNoteTitle: (noteName: string) => void;
   setActiveNote: (note: NoteProps) => void;
+  setActiveEditor: (editor: OutputData) => void;  
 }
 
 export const useActiveNoteStore = create<ActiveState>()((set) => ({
+  activeEditor: {
+    blocks: [],
+  },
   activeNoteTitle: "",
   activeNote: {
     noteId: "",
@@ -29,6 +35,7 @@ export const useActiveNoteStore = create<ActiveState>()((set) => ({
   setActiveNoteTitle: (noteName) =>
     set((state) => ({ activeNoteTitle: noteName })),
   setActiveNote: (note) => set((state) => ({ activeNote: note })),
+  setActiveEditor: (editor) => set((state) => ({ activeEditor: editor })),
 }));
 
 type NoteDetailsProps = {
