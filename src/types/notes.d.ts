@@ -1,6 +1,6 @@
 export type NoteProps = {
   noteId: string;
   title: string;
-  content: string;
+  content: OutputData;
   createdAt: string;
 };

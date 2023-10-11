@@ -8,12 +8,10 @@ const TitleList: React.FC = () => {
   const { notes } = useNoteStore();
   const { activeNoteTitle, setActiveNoteTitle } = useActiveNoteStore(state => state);
   const { activeNote, setActiveNote } = useActiveNoteStore(state => state);
-  const setActiveEditor = useActiveNoteStore(state => state.setActiveEditor);
   const handleNoteClick = async (noteId: string) => {
     // await appWindow.setTitle(`${noteName.split(".json")[0]} - noty`);
     setActiveNote(notes.filter((v: any) => v.noteId === noteId)[0]);
     setActiveNoteTitle(notes.filter((v: any) => v.noteId === noteId)[0].title);
-    setActiveEditor(JSON.parse(notes.filter((v: any) => v.noteId === noteId)[0].content));
     console.log("active note: " + noteId)
   };
 

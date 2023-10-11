@@ -2,7 +2,8 @@
 import { invoke } from "@tauri-apps/api/tauri";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useActiveNoteStore } from "@/store/NoteStore";
+import { useActiveNoteStore, useNoteStore } from "@/store/NoteStore";
+import { OutputData } from "@editorjs/editorjs";
 
 const Editor = dynamic(() => import("@/components/Editor"), {
   ssr: false,
@@ -12,7 +13,8 @@ export default function HomePage() {
   console.log("rendering home");
   const [greet, setGreet] = useState<string>("111");
   const activeNote = useActiveNoteStore((state) => state.activeNote);
-  const activeEditor = useActiveNoteStore((state) => state.activeEditor);
+  const setActiveNote = useActiveNoteStore((state) => state.setActiveNote);
+  const updateNotes = useNoteStore((state) => state.updateNotes);
   useEffect(() => {
     invoke<string>("greet", { name: "Next.js" })
       .then((p) => {
@@ -24,10 +26,13 @@ export default function HomePage() {
 
   return (
       <Editor
-        data={activeEditor}
+        data={activeNote.content}
         holder="editor-container"
-        onChange={() => {
-          console.log("changed");
+        onChange={(val: OutputData) => {
+          console.log("change data:" + val)
+          const changedData = {...activeNote};
+          changedData.content = val;
+          // setActiveNote(newActiveNote)
         }}
       />
   );

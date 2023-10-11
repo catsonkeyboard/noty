@@ -13,29 +13,25 @@ export const useNoteStore = create<NoteState>()((set) => ({
 }));
 
 interface ActiveState {
-  activeEditor: OutputData;
   activeNoteTitle: string;
   activeNote: NoteProps;
   setActiveNoteTitle: (noteName: string) => void;
   setActiveNote: (note: NoteProps) => void;
-  setActiveEditor: (editor: OutputData) => void;  
 }
 
 export const useActiveNoteStore = create<ActiveState>()((set) => ({
-  activeEditor: {
-    blocks: [],
-  },
   activeNoteTitle: "",
   activeNote: {
     noteId: "",
     title: "",
-    content: "",
+    content: {
+      blocks: [],
+    },
     createdAt: "",
   },
   setActiveNoteTitle: (noteName) =>
     set((state) => ({ activeNoteTitle: noteName })),
   setActiveNote: (note) => set((state) => ({ activeNote: note })),
-  setActiveEditor: (editor) => set((state) => ({ activeEditor: editor })),
 }));
 
 type NoteDetailsProps = {
