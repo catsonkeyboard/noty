@@ -1,4 +1,5 @@
 import './globals.css'
+import '@radix-ui/themes/styles.css';
 import { Theme } from '@radix-ui/themes';
 import { Inter } from 'next/font/google';
 const inter = Inter({ subsets: ['latin'] })

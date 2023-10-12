@@ -3,51 +3,57 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import { useNoteStore, useActiveNoteStore } from "@/store/NoteStore";
 import { ScrollArea } from "@/components/UI/ScrollArea";
+import { Trash2 } from "lucide-react";
+import TitleListItem from "./TitleListItem";
+import { n } from "@tauri-apps/api/fs-9d7de754";
 
 const TitleList: React.FC = () => {
-  const { notes } = useNoteStore();
-  const { activeNoteTitle, setActiveNoteTitle } = useActiveNoteStore(state => state);
-  const { activeNote, setActiveNote } = useActiveNoteStore(state => state);
+  const { notes, updateNotes } = useNoteStore();
+  const { activeNoteTitle, setActiveNoteTitle } = useActiveNoteStore(
+    (state) => state
+  );
+  const activeNote = useActiveNoteStore((state) => state.activeNote);
+  const setActiveNote = useActiveNoteStore((state) => state.setActiveNote);
   const handleNoteClick = async (noteId: string) => {
     // await appWindow.setTitle(`${noteName.split(".json")[0]} - noty`);
     setActiveNote(notes.filter((v: any) => v.noteId === noteId)[0]);
     setActiveNoteTitle(notes.filter((v: any) => v.noteId === noteId)[0].title);
-    console.log("active note: " + noteId)
+    console.log("active note: " + noteId);
   };
+
+  const handleDeleteNote = async (noteId: string) => {
+    //删除前索引
+    const index = notes.findIndex((v: any) => v.noteId === noteId);
+    //删除后集合
+    const newNotes = notes.filter((v: any) => v.noteId !== noteId);
+    const newActiveNote = newNotes[index - 1];
+    setActiveNote(newActiveNote);
+    setActiveNoteTitle(newActiveNote?.title);
+    updateNotes(newNotes);
+  };
+
+  useEffect(() => {
+      console.log("111")
+  }, [activeNote]);
+
+  useEffect(() => {
+    console.log("222")
+}, [notes]);
 
   return (
     <div className="mt-5">
       <ScrollArea>
         <AnimatePresence>
           {notes &&
-            notes.map((v, i) => {
-              return (
-                <motion.div
-                  variants={{
-                    hidden: {
-                      opacity: 0,
-                    },
-                    visible: (i) => ({
-                      opacity: 1,
-                      transition: {
-                        delay: i * 0.04,
-                      },
-                    }),
-                  }}
-                  initial="hidden"
-                  animate="visible"
-                  custom={i}
-                  className={
-                    "p-1 pl-4 m-2 hover:cursor-pointer hover:bg-accent rounded-lg " +
-                    (activeNoteTitle === v.title ? "bg-muted" : "")
-                  }
-                  key={v.noteId}
-                  onClick={() => handleNoteClick(v.noteId as string)}
-                >
-                  {v.title}
-                </motion.div>
-              );
-            })}
+            notes.map((v, i) => (
+              <TitleListItem
+                key={i}
+                index={i}
+                note={v}
+                onClick={handleNoteClick}
+                deleteNote={handleDeleteNote}
+              />
+            ))}
         </AnimatePresence>
       </ScrollArea>
     </div>
