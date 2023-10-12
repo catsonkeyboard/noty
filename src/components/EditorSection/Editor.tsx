@@ -21,8 +21,8 @@ const Editor = ({ data, onChange, holder }: Props) => {
         holder: holder,
         tools: EDITOR_JS_TOOLS,
         async onChange(api, event) {
-          const data = await api.saver.save();
-          onChange(data);
+          const save = api.saver.save();
+          onChange(await save);
         },
       });
       ref.current = editor;
@@ -44,4 +44,4 @@ const Editor = ({ data, onChange, holder }: Props) => {
   return <div id={holder} className="w-full h-full prose max-w-full"></div>;
 };
 
-export default Editor;
+export default memo(Editor);

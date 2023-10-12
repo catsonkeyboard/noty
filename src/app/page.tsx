@@ -1,11 +1,14 @@
 "use client";
 import { invoke } from "@tauri-apps/api/tauri";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useActiveNoteStore, useNoteStore } from "@/store/NoteStore";
 import { OutputData } from "@editorjs/editorjs";
 
-const Editor = dynamic(() => import("@/components/Editor"), {
+const EditorSection = dynamic(() => import("@/components/EditorSection"), {
+  ssr: false,
+});
+const DirectorySection = dynamic(() => import("@/components/Directory"), {
   ssr: false,
 });
 
@@ -14,7 +17,8 @@ export default function HomePage() {
   const [greet, setGreet] = useState<string>("111");
   const activeNote = useActiveNoteStore((state) => state.activeNote);
   const setActiveNote = useActiveNoteStore((state) => state.setActiveNote);
-  const updateNotes = useNoteStore((state) => state.updateNotes);
+  const { notes, updateNotes } = useNoteStore((state) => state);
+  const [data, setData] = useState<OutputData>({ blocks: [], time: 0 });
   useEffect(() => {
     invoke<string>("greet", { name: "Next.js" })
       .then((p) => {
@@ -24,16 +28,32 @@ export default function HomePage() {
       .catch(console.error);
   }, []);
 
+  useEffect(() => {
+    if (activeNote) {
+      updateNotes(
+        notes.map((v) => {
+          if (v.noteId === activeNote.noteId) {
+            return {
+              ...v,
+              content: data,
+            };
+          } else {
+            return v;
+          }
+        })
+      );
+    }
+  }, [data]);
+
   return (
-      <Editor
-        data={activeNote.content}
-        holder="editor-container"
-        onChange={(val: OutputData) => {
-          console.log("change data:" + val)
-          const changedData = {...activeNote};
-          changedData.content = val;
-          // setActiveNote(newActiveNote)
-        }}
-      />
+    <main className="relative w-full h-screen flex flex-col bg-primary-foreground select-none overflow-hidden">
+      <div className="relative w-full h-full flex">
+        <DirectorySection />
+        <EditorSection
+          content={activeNote?.content}
+          setContent={setData}
+        />
+      </div>
+    </main>
   );
 }
