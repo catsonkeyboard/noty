@@ -11,19 +11,7 @@ const Header: React.FC = () => {
   //add new note
   const createNote = async () => {
     const uuid = uuidv4();
-    updateNotes([ ...notes, { noteId : uuid, title: "Untitled-" + count, content: {
-      time: 1635603431943,
-      blocks: [
-        {
-          id: 'sheNwCUP5A',
-          type: 'header',
-          data: {
-            text: 'Editor.js ' + uuid,
-            level: 2,
-          },
-        }
-      ],
-    }, createdAt: "" }]);
+    updateNotes([ ...notes, { noteId : uuid, title: "Untitled-" + count, content: data, createdAt: "" }]);
     setCount(count + 1);
   }
 

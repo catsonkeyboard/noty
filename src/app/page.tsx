@@ -4,11 +4,14 @@ import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useActiveNoteStore, useNoteStore } from "@/store/NoteStore";
 import { OutputData } from "@editorjs/editorjs";
-
+import { Grid, Box } from "@radix-ui/themes";
 const EditorSection = dynamic(() => import("@/components/EditorSection"), {
   ssr: false,
 });
 const DirectorySection = dynamic(() => import("@/components/Directory"), {
+  ssr: false,
+});
+const AppBar = dynamic(() => import("@/components/AppBar"), {
   ssr: false,
 });
 
@@ -47,6 +50,7 @@ export default function HomePage() {
 
   return (
     <main className="relative w-full h-screen flex flex-col bg-primary-foreground select-none overflow-hidden">
+      <AppBar />
       <div className="relative w-full h-full flex">
         <DirectorySection />
         <EditorSection

@@ -9,11 +9,14 @@ type EditorSectionProps = {
 
 const EditorSection: React.FC<EditorSectionProps> = (props) => {
   return (
+    <div className="p-6">
     <Editor
       data={props.content}
       holder="editor-container"
       onChange={(e) => { props.setContent(e); }}
     />
+    </div>
+
   );
 };
 

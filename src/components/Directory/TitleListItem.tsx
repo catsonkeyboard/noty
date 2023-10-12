@@ -50,42 +50,10 @@ const TitleListItem = ({ index, note, onClick, deleteNote }: Props) => {
             }
             key={index}
             onClick={() => onClick(note.noteId)}
+            onContextMenu={() => onClick(note.noteId)}
           >
             {note.title}
             {activeNoteTitle === note.title ? (
-              // <AlertDialog>
-              //   <AlertDialogTrigger asChild>
-              //     <Trash2
-              //       size={16}
-              //       className="hover:text-red-600 hover:cursor-pointer"
-              //     />
-              //   </AlertDialogTrigger>
-              //   <AlertDialogContent>
-              //     <AlertDialogHeader>
-              //       <AlertDialogTitle>
-              //         {" "}
-              //         Delete {activeNoteTitle.split(".json")[0]} ?
-              //       </AlertDialogTitle>
-              //       <AlertDialogDescription>
-              //         This action cannot be undone. This will{" "}
-              //         <span className="underline">permanently</span> remove the
-              //         file from the system!
-              //       </AlertDialogDescription>
-              //     </AlertDialogHeader>
-              //     <AlertDialogFooter>
-              //       <AlertDialogCancel>Cancel</AlertDialogCancel>
-              //       <AlertDialogAction
-              //         className="bg-red-600 hover:bg-red-700 text-primary"
-              //         onClick={() => {
-              //           deleteNote(note.noteId);
-              //         }}
-              //       >
-              //         {" "}
-              //         Delete
-              //       </AlertDialogAction>
-              //     </AlertDialogFooter>
-              //   </AlertDialogContent>
-              // </AlertDialog>
               <AlertDialog.Root>
                 <AlertDialog.Trigger>
                   <Trash2
