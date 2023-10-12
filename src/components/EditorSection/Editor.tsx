@@ -18,6 +18,7 @@ const Editor = ({ data, onChange, holder }: Props) => {
     //initialize editor if we don't have a reference
     if (!ref.current) {
       const editor = new EditorJS({
+        autofocus: true,
         holder: holder,
         tools: EDITOR_JS_TOOLS,
         async onChange(api, event) {
