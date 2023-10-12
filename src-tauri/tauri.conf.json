@@ -12,7 +12,47 @@
   },
   "tauri": {
     "allowlist": {
-      "all": false
+      "all": false,
+      "path": {
+        "all": true
+      },
+      "fs": {
+        "createDir": true,
+        "readDir": true,
+        "readFile": true,
+        "writeFile": true,
+        "exists": true,
+        "renameFile": true,
+        "removeFile": true,
+        "scope": ["$DOCUMENT/Noty", "$DOCUMENT/Noty/**/*"]
+      },
+      "window": {
+        "all": false,
+        "close": true,
+        "hide": true,
+        "show": true,
+        "maximize": true,
+        "minimize": true,
+        "unmaximize": true,
+        "unminimize": true,
+        "startDragging": true,
+        "setIgnoreCursorEvents": true,
+        "setTitle": true,
+        "setFullscreen": true
+      },      
+      "clipboard": {
+        "all": false,
+        "readText": false,
+        "writeText": true
+      },
+      "dialog": {
+        "all": false,
+        "ask": false,
+        "confirm": false,
+        "message": false,
+        "open": false,
+        "save": true
+      }
     },
     "bundle": {
       "active": true,
@@ -55,6 +95,7 @@
     },
     "windows": [
       {
+        "decorations": false,
         "fullscreen": false,
         "height": 800,
         "resizable": true,
