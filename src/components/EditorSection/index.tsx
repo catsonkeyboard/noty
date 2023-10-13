@@ -1,5 +1,5 @@
 import { OutputData } from "@editorjs/editorjs";
-import React,{ useEffect} from "react";
+import React from "react";
 import Editor from "@/components/EditorSection/Editor";
 
 type EditorSectionProps = {

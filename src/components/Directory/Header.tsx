@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNoteStore } from "@/store/NoteStore";
-import { PlusIcon,ArrowLeftFromLine } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { v4 as uuidv4 } from 'uuid';
 import { data } from "@/lib/data";
 import { Dayjs } from "dayjs";
