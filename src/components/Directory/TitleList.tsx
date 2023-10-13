@@ -2,10 +2,9 @@ import { appWindow } from "@tauri-apps/api/window";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import { useNoteStore, useActiveNoteStore } from "@/store/NoteStore";
-import { ScrollArea } from "@/components/UI/ScrollArea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2 } from "lucide-react";
 import TitleListItem from "./TitleListItem";
-import { n } from "@tauri-apps/api/fs-9d7de754";
 
 const TitleList: React.FC = () => {
   const { notes, updateNotes } = useNoteStore();

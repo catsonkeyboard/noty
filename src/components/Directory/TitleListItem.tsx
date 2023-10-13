@@ -1,15 +1,38 @@
+"use client"
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { NoteProps } from "@/types/notes";
 import { Trash2 } from "lucide-react";
 import { useActiveNoteStore } from "@/store/NoteStore";
 import {
-  ContextMenu,
-  AlertDialog,
   Button,
   Flex,
   Theme,
 } from "@radix-ui/themes";
+// import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSub,
+  ContextMenuSeparator,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
+  ContextMenuShortcut
+} from "@/components/ui/context-menu"
+import { emit, listen } from "@tauri-apps/api/event";
 
 type Props = {
   index: number;
@@ -25,8 +48,8 @@ const TitleListItem = ({ index, note, onClick, deleteNote }: Props) => {
   const [isHover, setIsHover] = React.useState(false);
   return (
     <Theme>
-      <ContextMenu.Root>
-        <ContextMenu.Trigger>
+      <ContextMenu>
+        <ContextMenuTrigger>
           <motion.div
             onMouseOver={() => setIsHover(true)}
             onMouseOut={() => setIsHover(false)}
@@ -54,66 +77,82 @@ const TitleListItem = ({ index, note, onClick, deleteNote }: Props) => {
           >
             {note.title}
             {activeNoteTitle === note.title ? (
-              <AlertDialog.Root>
-                <AlertDialog.Trigger>
+              <AlertDialog>
+                <AlertDialogTrigger>
                   <Trash2
                     size={16}
                     className="hover:text-red-600 hover:cursor-pointer"
                   />
-                </AlertDialog.Trigger>
-                <AlertDialog.Content style={{ maxWidth: 450 }}>
-                  <AlertDialog.Title>
+                </AlertDialogTrigger>
+                <AlertDialogContent style={{ maxWidth: 450 }}>
+                  <AlertDialogTitle>
                     {" "}
                     Delete {activeNoteTitle} ?
-                  </AlertDialog.Title>
-                  <AlertDialog.Description size="2">
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
                     This action cannot be undone. This will{" "}
                     <span className="underline">permanently</span> remove the
                     file from the system!
-                  </AlertDialog.Description>
+                  </AlertDialogDescription>
                   <Flex gap="3" mt="4" justify="end">
-                    <AlertDialog.Cancel>
+                    <AlertDialogCancel>
                       <Button variant="soft" color="gray">
                         Cancel
                       </Button>
-                    </AlertDialog.Cancel>
-                    <AlertDialog.Action>
-                      <Button variant="solid" color="red" onClick={() => { deleteNote(note.noteId) }}>
+                    </AlertDialogCancel>
+                    <AlertDialogAction>
+                      <Button
+                        variant="solid"
+                        color="red"
+                        onClick={() => {
+                          deleteNote(note.noteId);
+                        }}
+                      >
                         Delete
                       </Button>
-                    </AlertDialog.Action>
+                    </AlertDialogAction>
                   </Flex>
-                </AlertDialog.Content>
-              </AlertDialog.Root>
+                </AlertDialogContent>
+              </AlertDialog>
             ) : (
               <></>
             )}
           </motion.div>
-        </ContextMenu.Trigger>
-        <ContextMenu.Content>
-          <ContextMenu.Item shortcut="⌘ E">Edit</ContextMenu.Item>
-          <ContextMenu.Item shortcut="⌘ D">Duplicate</ContextMenu.Item>
-          <ContextMenu.Separator />
-          <ContextMenu.Item shortcut="⌘ N">Archive</ContextMenu.Item>
-
-          <ContextMenu.Sub>
-            <ContextMenu.SubTrigger>More</ContextMenu.SubTrigger>
-            <ContextMenu.SubContent>
-              <ContextMenu.Item>Move to project…</ContextMenu.Item>
-              <ContextMenu.Item>Move to folder…</ContextMenu.Item>
-              <ContextMenu.Separator />
-              <ContextMenu.Item>Advanced options…</ContextMenu.Item>
-            </ContextMenu.SubContent>
-          </ContextMenu.Sub>
-          <ContextMenu.Separator />
-          <ContextMenu.Item>Share</ContextMenu.Item>
-          <ContextMenu.Item>Add to favorites</ContextMenu.Item>
-          <ContextMenu.Separator />
-          <ContextMenu.Item shortcut="⌘ ⌫" color="red">
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            onClick={() => {
+              console.log('click')
+              emit("click", {
+                theMessage: "Tauri is awesome!",
+              });
+            }}
+          >
+            Edit
+            <ContextMenuShortcut>⌘ E</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem>Duplicate<ContextMenuShortcut>⌘ D</ContextMenuShortcut></ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem>Archive<ContextMenuShortcut>⌘ N</ContextMenuShortcut></ContextMenuItem>
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>More</ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              <ContextMenuItem>Move to project…</ContextMenuItem>
+              <ContextMenuItem>Move to folder…</ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem>Advanced options…</ContextMenuItem>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+          <ContextMenuSeparator />
+          <ContextMenuItem>Share</ContextMenuItem>
+          <ContextMenuItem>Add to favorites</ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem color="red">
             Delete
-          </ContextMenu.Item>
-        </ContextMenu.Content>
-      </ContextMenu.Root>
+            <ContextMenuShortcut>⌘ ⌫</ContextMenuShortcut>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </Theme>
   );
 };
