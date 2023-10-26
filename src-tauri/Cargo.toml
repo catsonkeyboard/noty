@@ -2,7 +2,7 @@
 name = "noty"
 version = "0.0.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["catsonkeyboard"]
 license = ""
 repository = ""
 edition = "2021"

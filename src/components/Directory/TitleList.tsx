@@ -32,28 +32,26 @@ const TitleList: React.FC = () => {
   };
 
   useEffect(() => {
-      console.log("111")
+    console.log("111");
   }, [activeNote]);
 
   useEffect(() => {
-    console.log("222")
-}, [notes]);
+    console.log("222");
+  }, [notes]);
 
   return (
     <div className="mt-5">
-      <ScrollArea>
-        <AnimatePresence>
-          {notes &&
-            notes.map((v, i) => (
-              <TitleListItem
-                key={i}
-                index={i}
-                note={v}
-                onClick={handleNoteClick}
-                deleteNote={handleDeleteNote}
-              />
-            ))}
-        </AnimatePresence>
+      <ScrollArea className="h-full w-full">
+        {notes &&
+          notes.map((v, i) => (
+            <TitleListItem
+              key={i}
+              index={i}
+              note={v}
+              onClick={handleNoteClick}
+              deleteNote={handleDeleteNote}
+            />
+          ))}
       </ScrollArea>
     </div>
   );

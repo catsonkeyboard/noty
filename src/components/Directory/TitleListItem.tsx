@@ -47,7 +47,6 @@ const TitleListItem = ({ index, note, onClick, deleteNote }: Props) => {
   );
   const [isHover, setIsHover] = React.useState(false);
   return (
-    <Theme>
       <ContextMenu>
         <ContextMenuTrigger>
           <motion.div
@@ -81,7 +80,7 @@ const TitleListItem = ({ index, note, onClick, deleteNote }: Props) => {
                 <AlertDialogTrigger>
                   <Trash2
                     size={16}
-                    className="hover:text-red-600 hover:cursor-pointer"
+                    className="hover:text-red-600 hover:cursor-pointer pr-1"
                   />
                 </AlertDialogTrigger>
                 <AlertDialogContent style={{ maxWidth: 450 }}>
@@ -153,7 +152,6 @@ const TitleListItem = ({ index, note, onClick, deleteNote }: Props) => {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-    </Theme>
   );
 };
 

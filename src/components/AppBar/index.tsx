@@ -51,7 +51,7 @@ const AppBar = () => {
       data-tauri-drag-region
       className="max-h-10 w-full text-muted-foreground flex justify-between items-center"
     >
-      <div className="h-full flex items-center pl-3">
+      <div className="flex h-full items-center pl-3">
         {focusMode && (
           <span className="text-xs mr-2 pointer-events-none">
             Noty v{version}
