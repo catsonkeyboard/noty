@@ -8,10 +8,23 @@ import { Dayjs } from "dayjs";
 const Header: React.FC = () => {
   const { notes, updateNotes } = useNoteStore();
   const [ count, setCount ] = useState(0);  
+
+  const newData = {
+    time: 1635603431943,
+    blocks: [
+      {
+        id: '12iM3lqzcm',
+        type: 'paragraph',
+        data: {
+          text: '1122342',
+        },
+      }
+    ]
+  }
   //add new note
   const createNote = async () => {
     const uuid = uuidv4();
-    updateNotes([ ...notes, { noteId : uuid, title: "Untitled-" + count, content: data, createdAt: "" }]);
+    updateNotes([ ...notes, { noteId : uuid, title: "Untitled-" + count, content: newData, createdAt: "" }]);
     setCount(count + 1);
   }
 
