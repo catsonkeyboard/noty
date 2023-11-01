@@ -9,14 +9,15 @@ type EditorSectionProps = {
 
 const EditorSection: React.FC<EditorSectionProps> = (props) => {
   return (
-    <div className="p-6 overflow-auto">
-      <Editor
-        data={props.content}
-        holder="editor-container"
-        onChange={(e) => { props.setContent(e); }}
-      />
+    <div className="w-full h-full">
+      <div className="p-6 overflow-auto">
+        <Editor
+          data={props.content}
+          holder="editor-container"
+          onChange={(e) => { props.setContent(e); }}
+        />
+      </div>
     </div>
-
   );
 };
 

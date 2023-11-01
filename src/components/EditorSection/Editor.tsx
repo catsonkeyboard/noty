@@ -1,6 +1,7 @@
 import EditorJS, { OutputData } from "@editorjs/editorjs";
 import { EDITOR_JS_TOOLS } from "@/utils/constants";
 import React, { memo, useEffect, useRef } from "react";
+import styles from "./editor.module.css";
 
 //props
 type Props = {
@@ -42,7 +43,9 @@ const Editor = ({ data, onChange, holder }: Props) => {
     }
   }, [data]);
 
-  return <div id={holder} className="w-full h-full prose max-w-full"></div>;
+  //w-full h-full prose max-w-full
+  //use dark mode : https://zenn.dev/nicopin/articles/94f383ccfecf49
+  return <div id={holder} className={`${styles.wrapper} ${styles["dark-mode"]}`}></div>;
 };
 
 export default memo(Editor);
