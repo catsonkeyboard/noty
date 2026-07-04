@@ -1,54 +1,67 @@
-import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/tauri";
+import { useEffect } from "react";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import "./App.css";
 import AppBar from "./components/AppBar";
-import DirectorySection from "./components/Directory";
-import EditorSection from "./components/EditorSection";
-import { useActiveNoteStore, useNoteStore } from "./store/NoteStore";
-import { OutputData } from "@editorjs/editorjs";
+import FileTree from "./components/FileTree";
+import EditorArea from "./components/Editor";
+import VaultPicker from "./components/VaultPicker";
+import SearchBar from "./components/SearchBar";
+import AiPanel from "./components/AiPanel";
+import SettingsDialog from "./components/Settings/SettingsDialog";
 import { ThemeProvider } from "@/components/theme-provider";
-import { listen } from '@tauri-apps/api/event'
+import { useSettingsStore } from "@/store/SettingsStore";
+import { useVaultStore } from "@/store/VaultStore";
+import { useEditorStore } from "@/store/EditorStore";
 
 function App() {
-  const activeNote = useActiveNoteStore((state) => state.activeNote);
-  const { notes, updateNotes } = useNoteStore((state) => state);
-  const [data, setData] = useState<OutputData>({ blocks: [], time: 0 });
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
-
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    setGreetMsg(await invoke("greet", { name }));
-    listen('click', (event) => {
-      console.log("listen click:" + event);
-    })
-  }
+  const hydrated = useSettingsStore((s) => s.hydrated);
+  const vaultPath = useSettingsStore((s) => s.vaultPath);
+  const hydrate = useSettingsStore((s) => s.hydrate);
+  const loadTree = useVaultStore((s) => s.loadTree);
 
   useEffect(() => {
-    if (activeNote) {
-      updateNotes(
-        notes.map((v) => {
-          if (v.noteId === activeNote.noteId) {
-            return {
-              ...v,
-              content: data,
-            };
-          } else {
-            return v;
-          }
-        })
-      );
-    }
-  }, [data]);
+    hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    if (vaultPath) loadTree();
+  }, [vaultPath, loadTree]);
+
+  // don't lose the last debounce window of typing when the app is closed
+  useEffect(() => {
+    const appWindow = getCurrentWebviewWindow();
+    const unlisten = appWindow.onCloseRequested(async (event) => {
+      const { dirty, pendingFlush } = useEditorStore.getState();
+      if (dirty && pendingFlush) {
+        event.preventDefault();
+        await pendingFlush();
+        await appWindow.destroy();
+      }
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <main className="relative w-full h-screen flex flex-col bg-primary-foreground select-none overflow-hidden">
+    <ThemeProvider>
+      <main className="relative w-full h-screen flex flex-col bg-background text-foreground select-none overflow-hidden">
         <AppBar />
-        <div className="relative w-full h-full flex">
-          <DirectorySection />
-          <EditorSection content={activeNote?.content} setContent={setData} />
-        </div>
+        {hydrated && (
+          <div className="relative w-full h-full min-h-0 flex">
+            {vaultPath ? (
+              <>
+                <FileTree />
+                <EditorArea />
+                <SearchBar />
+                <AiPanel />
+              </>
+            ) : (
+              <VaultPicker />
+            )}
+            <SettingsDialog />
+          </div>
+        )}
       </main>
     </ThemeProvider>
   );

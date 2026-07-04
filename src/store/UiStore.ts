@@ -1,15 +1,25 @@
 import { create } from "zustand";
 
+export type AiPanelMode = "ask" | "summarize" | null;
+
 type UiStoreProps = {
   focusMode: boolean;
-  editorActive: boolean;
+  searchOpen: boolean;
+  settingsOpen: boolean;
+  aiPanel: AiPanelMode;
   setFocusMode: () => void;
-  setEditorActive: (status: boolean) => void;
+  setSearchOpen: (open: boolean) => void;
+  setSettingsOpen: (open: boolean) => void;
+  setAiPanel: (mode: AiPanelMode) => void;
 };
 
 export const useUiStore = create<UiStoreProps>()((set) => ({
   focusMode: true,
-  editorActive: false,
+  searchOpen: false,
+  settingsOpen: false,
+  aiPanel: null,
   setFocusMode: () => set((state) => ({ focusMode: !state.focusMode })),
-  setEditorActive: (status) => set((state) => ({ editorActive: status })),
+  setSearchOpen: (open) => set(() => ({ searchOpen: open })),
+  setSettingsOpen: (open) => set(() => ({ settingsOpen: open })),
+  setAiPanel: (mode) => set(() => ({ aiPanel: mode })),
 }));
