@@ -44,7 +44,9 @@ const SettingsDialog = () => {
   const changeVault = async () => {
     const selected = await open({ directory: true, multiple: false });
     if (typeof selected === "string" && selected !== vaultPath) {
-      useEditorStore.getState().closeNote();
+      const { pendingFlush, closeAll } = useEditorStore.getState();
+      if (pendingFlush) await pendingFlush();
+      closeAll();
       await setVaultPath(selected);
     }
   };

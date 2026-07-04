@@ -62,15 +62,16 @@ const TreeItem = ({ node, depth }: Props) => {
     if (newPath) handleRename(node.path, newPath);
   };
 
-  const onClick = () => {
+  const onClick = (e: React.MouseEvent) => {
     if (editing) return;
     if (node.is_dir) toggleDir(node.path);
-    else openNote(node.path);
+    // Cmd (macOS) / Ctrl (Windows) + click opens in a new tab
+    else openNote(node.path, { newTab: e.metaKey || e.ctrlKey });
   };
 
   const onNewNote = async () => {
     const path = await createNote(node.path, "Untitled");
-    if (path) openNote(path);
+    if (path) openNote(path, { newTab: true });
   };
 
   const onDrop = async (e: React.DragEvent) => {

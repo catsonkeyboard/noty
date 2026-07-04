@@ -106,6 +106,10 @@
   @apply prose prose-slate dark:prose-invert max-w-3xl mx-auto min-h-full outline-none;
 }
 
+.noty-editor.wide .ProseMirror {
+  @apply max-w-none;
+}
+
 .noty-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   @apply text-muted-foreground pointer-events-none float-left h-0;
@@ -150,6 +154,15 @@
 
 ::-webkit-scrollbar {
   width: 7px;
+  height: 7px;
+}
+
+/* tab bar: barely-there horizontal scrollbar */
+.noty-tabbar::-webkit-scrollbar {
+  height: 3px;
+}
+.noty-tabbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.25);
 }
 
 ::-webkit-scrollbar-thumb {
