@@ -19,7 +19,7 @@ const FileTree = () => {
 
   const onNewNote = async () => {
     const path = await createNote(vaultPath, "Untitled");
-    if (path) openNote(path);
+    if (path) openNote(path, { newTab: true });
   };
 
   // dropping on the empty area moves an entry to the vault root

@@ -8,6 +8,7 @@ import VaultPicker from "./components/VaultPicker";
 import SearchBar from "./components/SearchBar";
 import AiPanel from "./components/AiPanel";
 import SettingsDialog from "./components/Settings/SettingsDialog";
+import StatusBar from "./components/StatusBar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useSettingsStore } from "@/store/SettingsStore";
 import { useVaultStore } from "@/store/VaultStore";
@@ -48,19 +49,22 @@ function App() {
       <main className="relative w-full h-screen flex flex-col bg-background text-foreground select-none overflow-hidden">
         <AppBar />
         {hydrated && (
-          <div className="relative w-full h-full min-h-0 flex">
-            {vaultPath ? (
-              <>
-                <FileTree />
-                <EditorArea />
-                <SearchBar />
-                <AiPanel />
-              </>
-            ) : (
-              <VaultPicker />
-            )}
-            <SettingsDialog />
-          </div>
+          <>
+            <div className="relative w-full flex-1 min-h-0 flex">
+              {vaultPath ? (
+                <>
+                  <FileTree />
+                  <EditorArea />
+                  <SearchBar />
+                  <AiPanel />
+                </>
+              ) : (
+                <VaultPicker />
+              )}
+              <SettingsDialog />
+            </div>
+            <StatusBar />
+          </>
         )}
       </main>
     </ThemeProvider>

@@ -1,3 +1,4 @@
+mod config;
 mod llm;
 mod secrets;
 mod vault;
@@ -6,9 +7,10 @@ mod vault;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_store::Builder::default().build())
         .manage(llm::LlmState::default())
         .invoke_handler(tauri::generate_handler![
+            config::load_config,
+            config::save_config,
             vault::fs_ops::ensure_default_vault,
             vault::fs_ops::list_vault,
             vault::fs_ops::read_note,

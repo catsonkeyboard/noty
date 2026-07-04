@@ -1,9 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { SparklesIcon } from "lucide-react";
+import { useCallback, useEffect, useRef } from "react";
 import { useEditorStore } from "@/store/EditorStore";
 import { useVaultStore } from "@/store/VaultStore";
 import { useUiStore } from "@/store/UiStore";
+import { useSettingsStore } from "@/store/SettingsStore";
+import RightPanel from "@/components/RightPanel";
 import NoteEditor from "./NoteEditor";
+import SourceEditor from "./SourceEditor";
+import TabBar from "./TabBar";
+import Breadcrumb from "./Breadcrumb";
+import Toolbar from "./Toolbar";
 
 const SAVE_DEBOUNCE_MS = 800;
 
@@ -11,12 +16,13 @@ const EditorArea = () => {
   const activePath = useEditorStore((s) => s.activePath);
   const body = useEditorStore((s) => s.body);
   const loadCounter = useEditorStore((s) => s.loadCounter);
-  const saveStatus = useEditorStore((s) => s.saveStatus);
   const save = useEditorStore((s) => s.save);
   const markDirty = useEditorStore((s) => s.markDirty);
   const setPendingFlush = useEditorStore((s) => s.setPendingFlush);
   const handleRename = useEditorStore((s) => s.handleRename);
   const rename = useVaultStore((s) => s.rename);
+  const viewMode = useUiStore((s) => s.viewMode);
+  const wide = useSettingsStore((s) => s.editorWidth) === "wide";
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef<string | null>(null);
@@ -41,7 +47,7 @@ const EditorArea = () => {
   const onChangeMarkdown = useCallback(
     (markdown: string) => {
       latest.current = markdown;
-      markDirty();
+      markDirty(markdown);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         timer.current = null;
@@ -55,78 +61,49 @@ const EditorArea = () => {
     [markDirty, save]
   );
 
-  if (!activePath) {
-    return (
-      <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-        Select or create a note to start writing.
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-full w-full min-w-0 flex-col">
-      <div className="flex items-center justify-between px-6 pt-2">
-        <NoteTitle
-          key={activePath}
-          path={activePath}
-          onRename={async (newName) => {
-            await flush();
-            const newPath = await rename(activePath, newName);
-            if (newPath) handleRename(activePath, newPath);
-          }}
-        />
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="w-16 text-right text-xs text-muted-foreground">
-            {saveStatus === "saving" && "Saving…"}
-            {saveStatus === "saved" && "Saved"}
-            {saveStatus === "error" && "Save failed"}
-          </span>
-          <button
-            className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            title="Summarize note with AI"
-            onClick={() => useUiStore.getState().setAiPanel("summarize")}
-          >
-            <SparklesIcon size={15} />
-          </button>
-        </div>
-      </div>
-      <NoteEditor
-        key={`${activePath}:${loadCounter}`}
-        initialBody={body}
-        onChangeMarkdown={onChangeMarkdown}
-      />
-    </div>
-  );
-};
-
-const NoteTitle = ({
-  path,
-  onRename,
-}: {
-  path: string;
-  onRename: (newName: string) => void;
-}) => {
-  const fileName = path.split("/").pop()?.replace(/\.md$/, "") ?? "";
-  const [value, setValue] = useState(fileName);
-
-  const submit = () => {
-    const trimmed = value.trim();
-    if (trimmed && trimmed !== fileName) onRename(trimmed);
-    else setValue(fileName);
+  const onRenameTitle = async (newName: string) => {
+    if (!activePath) return;
+    await flush();
+    const newPath = await rename(activePath, newName);
+    if (newPath) handleRename(activePath, newPath);
   };
 
   return (
-    <input
-      className="w-full truncate bg-transparent text-lg font-semibold outline-none"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={submit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-        if (e.key === "Escape") setValue(fileName);
-      }}
-      spellCheck={false}
-    />
+    <div className="flex h-full w-full min-w-0 flex-col">
+      <TabBar />
+      {activePath ? (
+        <>
+          <div className="flex items-center justify-between gap-4 px-6 pt-2 pb-1">
+            <Breadcrumb path={activePath} onRename={onRenameTitle} />
+            <Toolbar />
+          </div>
+          <div className="flex min-h-0 w-full flex-1">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              {viewMode === "rich" ? (
+                <NoteEditor
+                  body={body}
+                  loadCounter={loadCounter}
+                  wide={wide}
+                  onChangeMarkdown={onChangeMarkdown}
+                />
+              ) : (
+                <SourceEditor
+                  key={`${activePath}:${loadCounter}:source`}
+                  initialBody={body}
+                  wide={wide}
+                  onChangeMarkdown={onChangeMarkdown}
+                />
+              )}
+            </div>
+            <RightPanel />
+          </div>
+        </>
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+          Select or create a note to start writing.
+        </div>
+      )}
+    </div>
   );
 };
 
