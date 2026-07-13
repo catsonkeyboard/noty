@@ -28,6 +28,9 @@ pub fn run() {
             secrets::get_api_key,
             secrets::has_api_key,
             secrets::delete_api_key,
+            secrets::set_webdav_password,
+            secrets::has_webdav_password,
+            secrets::delete_webdav_password,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
