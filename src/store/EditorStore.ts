@@ -34,6 +34,8 @@ type EditorState = {
   openNote: (path: string, opts?: { newTab?: boolean }) => Promise<void>;
   closeTab: (path: string) => Promise<void>;
   closeAll: () => void;
+  /** Re-read the active note from disk (after sync downloaded a new version). No-op when dirty. */
+  reloadActive: () => Promise<void>;
   /** Called by the editor (debounced) with the current markdown. */
   save: (body: string) => Promise<void>;
   markDirty: (liveBody: string) => void;
@@ -135,6 +137,12 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         dirty: false,
         saveStatus: "idle",
       }),
+
+    reloadActive: async () => {
+      const { activePath, dirty } = get();
+      if (!activePath || dirty) return;
+      await loadNote(activePath);
+    },
 
     save: async (body) => {
       const { activePath, frontmatter } = get();
