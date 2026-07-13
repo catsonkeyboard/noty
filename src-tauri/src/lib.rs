@@ -9,6 +9,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(llm::LlmState::default())
+        .manage(sync::SyncGuard::default())
         .invoke_handler(tauri::generate_handler![
             config::load_config,
             config::save_config,
@@ -32,6 +33,8 @@ pub fn run() {
             secrets::set_webdav_password,
             secrets::has_webdav_password,
             secrets::delete_webdav_password,
+            sync::sync_now,
+            sync::webdav_test_connection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
