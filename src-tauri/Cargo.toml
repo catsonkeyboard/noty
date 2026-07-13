@@ -30,6 +30,8 @@ reqwest = { version = "0.13.4", features = ["json", "stream"] }
 futures-util = "0.3.32"
 tokio-util = "0.7.18"
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
+quick-xml = "0.38"
+percent-encoding = "2"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
