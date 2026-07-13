@@ -243,7 +243,11 @@ impl WebdavClient {
                 let text = resp.text().await.map_err(|e| e.to_string())?;
                 Ok(Propfind::Entries(parse_multistatus(&text, &self.root_path())?))
             }
-            400 | 403 | 501 => Ok(Propfind::Unsupported),
+            400 | 501 => Ok(Propfind::Unsupported),
+            // jianguoyun answers Depth:infinity with 403; on any other depth
+            // a 403 is a real permission error, not a Depth limitation
+            403 if depth == "infinity" => Ok(Propfind::Unsupported),
+            403 => Err("server refused PROPFIND (permission denied)".to_string()),
             401 => Err("authentication failed — check username / app password".to_string()),
             404 => Ok(Propfind::Entries(Vec::new())),
             s => Err(format!("PROPFIND failed with status {s}")),

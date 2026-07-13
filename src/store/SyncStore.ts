@@ -14,6 +14,8 @@ type SyncState = {
   lastError: string | null;
   /** Conflict copies created by the last sync (vault-relative paths). */
   lastConflicts: string[];
+  /** Local deletions the last sync skipped because the remote listing was empty. */
+  lastSkippedDeletes: number;
   syncNow: () => Promise<void>;
 };
 
@@ -23,22 +25,26 @@ export const useSyncStore = create<SyncState>()((set, get) => ({
   lastSyncAt: null,
   lastError: null,
   lastConflicts: [],
+  lastSkippedDeletes: 0,
 
   syncNow: async () => {
     const { vaultPath, webdavUrl } = useSettingsStore.getState();
     if (!vaultPath || !webdavUrl || get().status === "syncing") return;
+    // claim the syncing slot BEFORE any await, or a timer tick and a manual
+    // click racing through the flush below would both invoke sync_now
+    set({ status: "syncing", lastError: null, progress: null });
 
     // persist any pending edits so the freshest content gets uploaded
     const { pendingFlush } = useEditorStore.getState();
     if (pendingFlush) await pendingFlush();
 
-    set({ status: "syncing", lastError: null, progress: null });
     try {
       const summary = await syncApi.syncNow(vaultPath);
       set({
         status: "success",
         lastSyncAt: Date.now(),
         lastConflicts: summary.conflicts,
+        lastSkippedDeletes: summary.skippedDeletes,
         progress: null,
       });
 
@@ -60,6 +66,9 @@ export const useSyncStore = create<SyncState>()((set, get) => ({
       }
     } catch (e) {
       set({ status: "error", lastError: String(e), progress: null });
+      // a failed run may still have downloaded/deleted files before the
+      // error — refresh the tree so the UI doesn't show stale entries
+      await useVaultStore.getState().loadTree();
     }
   },
 }));

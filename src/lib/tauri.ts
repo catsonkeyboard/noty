@@ -34,6 +34,8 @@ export type SyncSummary = {
   conflicts: string[];
   deletedLocal: string[];
   deletedRemote: number;
+  /** Local deletions skipped because the remote listing came back empty. */
+  skippedDeletes: number;
 };
 
 export const syncApi = {
