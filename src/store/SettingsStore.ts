@@ -13,6 +13,21 @@ type AppConfig = {
     baseUrl: string | null;
     model: string | null;
   };
+  webdav: {
+    url: string | null;
+    username: string | null;
+    remoteDir: string | null;
+    syncOnStart: boolean | null;
+    autoSyncIntervalMins: number | null;
+  };
+};
+
+export type WebdavSettings = {
+  webdavUrl: string;
+  webdavUsername: string;
+  webdavRemoteDir: string;
+  webdavSyncOnStart: boolean;
+  webdavAutoSyncIntervalMins: number;
 };
 
 type SettingsState = {
@@ -22,6 +37,13 @@ type SettingsState = {
   editorWidth: EditorWidth;
   llmBaseUrl: string;
   llmModel: string;
+  webdavUrl: string;
+  webdavUsername: string;
+  webdavRemoteDir: string;
+  webdavSyncOnStart: boolean;
+  /** 0 = auto sync disabled */
+  webdavAutoSyncIntervalMins: number;
+  setWebdav: (patch: Partial<WebdavSettings>) => Promise<void>;
   hydrate: () => Promise<void>;
   setVaultPath: (path: string) => Promise<void>;
   setTheme: (theme: Theme) => Promise<void>;
@@ -41,6 +63,13 @@ export const useSettingsStore = create<SettingsState>()((set, get) => {
       theme: s.theme,
       editorWidth: s.editorWidth,
       llm: { baseUrl: s.llmBaseUrl, model: s.llmModel || null },
+      webdav: {
+        url: s.webdavUrl || null,
+        username: s.webdavUsername || null,
+        remoteDir: s.webdavRemoteDir || null,
+        syncOnStart: s.webdavSyncOnStart,
+        autoSyncIntervalMins: s.webdavAutoSyncIntervalMins,
+      },
     };
     try {
       await invoke("save_config", { config });
@@ -56,6 +85,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => {
     editorWidth: "normal",
     llmBaseUrl: DEFAULT_BASE_URL,
     llmModel: "",
+    webdavUrl: "",
+    webdavUsername: "",
+    webdavRemoteDir: "noty",
+    webdavSyncOnStart: true,
+    webdavAutoSyncIntervalMins: 10,
 
     hydrate: async () => {
       try {
@@ -67,6 +101,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => {
           editorWidth: config.editorWidth ?? "normal",
           llmBaseUrl: config.llm?.baseUrl ?? DEFAULT_BASE_URL,
           llmModel: config.llm?.model ?? "",
+          webdavUrl: config.webdav?.url ?? "",
+          webdavUsername: config.webdav?.username ?? "",
+          webdavRemoteDir: config.webdav?.remoteDir ?? "noty",
+          webdavSyncOnStart: config.webdav?.syncOnStart ?? true,
+          webdavAutoSyncIntervalMins: config.webdav?.autoSyncIntervalMins ?? 10,
         });
       } catch (e) {
         console.error("failed to load config:", e);
@@ -92,6 +131,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => {
     },
     setLlmModel: async (model) => {
       set({ llmModel: model });
+      await persist();
+    },
+    setWebdav: async (patch) => {
+      set(patch);
       await persist();
     },
   };

@@ -27,3 +27,20 @@ export const secretsApi = {
   hasApiKey: () => invoke<boolean>("has_api_key"),
   deleteApiKey: () => invoke<void>("delete_api_key"),
 };
+
+export type SyncSummary = {
+  uploaded: number;
+  downloaded: string[];
+  conflicts: string[];
+  deletedLocal: string[];
+  deletedRemote: number;
+};
+
+export const syncApi = {
+  syncNow: (vault: string) => invoke<SyncSummary>("sync_now", { vault }),
+  testConnection: (url: string, username: string, password: string | null) =>
+    invoke<void>("webdav_test_connection", { url, username, password }),
+  setWebdavPassword: (key: string) => invoke<void>("set_webdav_password", { key }),
+  hasWebdavPassword: () => invoke<boolean>("has_webdav_password"),
+  deleteWebdavPassword: () => invoke<void>("delete_webdav_password"),
+};
