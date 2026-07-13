@@ -105,6 +105,252 @@ pub fn plan(
     actions
 }
 
+use std::path::Path;
+
+fn mtime_secs(meta: &std::fs::Metadata) -> i64 {
+    meta.modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+/// Walk the vault; skip hidden entries and leftover atomic-write .tmp files.
+pub fn scan_local(root: &Path) -> Result<BTreeMap<String, LocalFile>, String> {
+    let mut files = BTreeMap::new();
+    let walker = walkdir::WalkDir::new(root).into_iter().filter_entry(|e| {
+        e.depth() == 0 || !e.file_name().to_string_lossy().starts_with('.')
+    });
+    for entry in walker {
+        let entry = entry.map_err(|e| e.to_string())?;
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        if entry.file_name().to_string_lossy().ends_with(".tmp") {
+            continue;
+        }
+        let meta = entry.metadata().map_err(|e| e.to_string())?;
+        let rel = entry
+            .path()
+            .strip_prefix(root)
+            .map_err(|e| e.to_string())?
+            .to_string_lossy()
+            .replace('\\', "/");
+        files.insert(rel, LocalFile { mtime: mtime_secs(&meta), size: meta.len() });
+    }
+    Ok(files)
+}
+
+/// All ancestor directories of a relative path, shallow → deep.
+fn parent_dirs(rel: &str) -> Vec<String> {
+    let segs: Vec<&str> = rel.split('/').collect();
+    let mut dirs = Vec::new();
+    let mut acc = String::new();
+    for seg in &segs[..segs.len().saturating_sub(1)] {
+        if !acc.is_empty() {
+            acc.push('/');
+        }
+        acc.push_str(seg);
+        dirs.push(acc.clone());
+    }
+    dirs
+}
+
+/// Save remote bytes as "name (conflict YYYY-MM-DD HHMM).ext" next to the
+/// original; appends " 1", " 2", … when the name is taken. Returns the
+/// vault-relative path of the copy.
+fn write_conflict_copy(vault_root: &Path, rel: &str, bytes: &[u8]) -> Result<String, String> {
+    let abs = vault_root.join(rel);
+    let dir = abs.parent().unwrap_or(vault_root).to_path_buf();
+    let stem = abs
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("note")
+        .to_string();
+    let ext = abs.extension().and_then(|s| s.to_str()).map(String::from);
+    let stamp = chrono::Local::now().format("%Y-%m-%d %H%M");
+    let base = format!("{stem} (conflict {stamp})");
+    let make = |suffix: &str| match &ext {
+        Some(e) => dir.join(format!("{base}{suffix}.{e}")),
+        None => dir.join(format!("{base}{suffix}")),
+    };
+    let mut candidate = make("");
+    let mut i = 1;
+    while candidate.exists() {
+        candidate = make(&format!(" {i}"));
+        i += 1;
+    }
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    std::fs::write(&candidate, bytes).map_err(|e| e.to_string())?;
+    Ok(candidate
+        .strip_prefix(vault_root)
+        .map_err(|e| e.to_string())?
+        .to_string_lossy()
+        .replace('\\', "/"))
+}
+
+use serde::Serialize;
+use tauri::Emitter;
+
+use super::state::{self, FileState};
+use super::webdav::WebdavClient;
+
+#[derive(Debug, Default, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncSummary {
+    pub uploaded: u32,
+    /// Vault-relative paths written locally (downloads + conflict copies).
+    pub downloaded: Vec<String>,
+    /// Vault-relative paths of conflict copies created.
+    pub conflicts: Vec<String>,
+    pub deleted_local: Vec<String>,
+    pub deleted_remote: u32,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct ProgressPayload {
+    current: usize,
+    total: usize,
+    path: String,
+}
+
+pub async fn run_sync(
+    app: &tauri::AppHandle,
+    home: &Path,
+    vault: &str,
+    cfg: &crate::config::WebdavConfig,
+    password: &str,
+) -> Result<SyncSummary, String> {
+    let url = cfg.url.clone().ok_or("WebDAV URL is not configured")?;
+    let username = cfg.username.clone().unwrap_or_default();
+    let remote_dir = cfg.remote_dir.clone().unwrap_or_else(|| "noty".to_string());
+    let client = WebdavClient::new(&url, &remote_dir, &username, password)?;
+
+    client.ensure_root().await?;
+    let remote = client.list_all().await?;
+    let vault_root = Path::new(vault)
+        .canonicalize()
+        .map_err(|e| format!("vault not accessible: {e}"))?;
+    let local = scan_local(&vault_root)?;
+    let snap_path = state::snapshot_path(home, vault);
+    let mut snapshot = state::load(&snap_path);
+
+    let actions = plan(&local, &remote, &snapshot);
+    let total = actions.len();
+    let mut summary = SyncSummary::default();
+    let mut created_dirs: BTreeSet<String> = BTreeSet::new();
+
+    for (i, action) in actions.iter().enumerate() {
+        app.emit(
+            "sync://progress",
+            ProgressPayload { current: i + 1, total, path: action.path().to_string() },
+        )
+        .ok();
+        execute_one(&client, &vault_root, action, &remote, &mut snapshot, &mut created_dirs, &mut summary)
+            .await?;
+        state::save(&snap_path, &snapshot)?;
+    }
+    Ok(summary)
+}
+
+async fn execute_one(
+    client: &WebdavClient,
+    vault_root: &Path,
+    action: &Action,
+    remote: &BTreeMap<String, RemoteFile>,
+    snapshot: &mut Snapshot,
+    created_dirs: &mut BTreeSet<String>,
+    summary: &mut SyncSummary,
+) -> Result<(), String> {
+    match action {
+        Action::Upload(path) => {
+            upload(client, vault_root, path, snapshot, created_dirs).await?;
+            summary.uploaded += 1;
+        }
+        Action::Download(path) => {
+            download(client, vault_root, path, remote, snapshot).await?;
+            summary.downloaded.push(path.clone());
+        }
+        Action::Conflict(path) => {
+            let bytes = client.get(path).await?;
+            let copy = write_conflict_copy(vault_root, path, &bytes)?;
+            upload(client, vault_root, path, snapshot, created_dirs).await?;
+            summary.downloaded.push(copy.clone());
+            summary.conflicts.push(copy);
+            summary.uploaded += 1;
+        }
+        Action::DeleteRemote(path) => {
+            client.delete(path).await?;
+            snapshot.remove(path);
+            summary.deleted_remote += 1;
+        }
+        Action::DeleteLocal(path) => {
+            match std::fs::remove_file(vault_root.join(path)) {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => return Err(e.to_string()),
+            }
+            snapshot.remove(path);
+            summary.deleted_local.push(path.clone());
+        }
+        Action::Forget(path) => {
+            snapshot.remove(path);
+        }
+    }
+    Ok(())
+}
+
+async fn upload(
+    client: &WebdavClient,
+    vault_root: &Path,
+    rel: &str,
+    snapshot: &mut Snapshot,
+    created_dirs: &mut BTreeSet<String>,
+) -> Result<(), String> {
+    for dir in parent_dirs(rel) {
+        if created_dirs.insert(dir.clone()) {
+            client.mkcol(&dir).await?;
+        }
+    }
+    let abs = vault_root.join(rel);
+    let bytes = std::fs::read(&abs).map_err(|e| e.to_string())?;
+    let etag = match client.put(rel, bytes).await? {
+        Some(etag) => etag,
+        None => client.file_etag(rel).await?,
+    };
+    let meta = std::fs::metadata(&abs).map_err(|e| e.to_string())?;
+    snapshot.insert(
+        rel.to_string(),
+        FileState { etag, local_mtime: mtime_secs(&meta), size: meta.len() },
+    );
+    Ok(())
+}
+
+async fn download(
+    client: &WebdavClient,
+    vault_root: &Path,
+    rel: &str,
+    remote: &BTreeMap<String, RemoteFile>,
+    snapshot: &mut Snapshot,
+) -> Result<(), String> {
+    let bytes = client.get(rel).await?;
+    let abs = vault_root.join(rel);
+    if let Some(parent) = abs.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let tmp = abs.with_extension("noty-sync.tmp");
+    std::fs::write(&tmp, &bytes).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, &abs).map_err(|e| e.to_string())?;
+    let meta = std::fs::metadata(&abs).map_err(|e| e.to_string())?;
+    let etag = remote.get(rel).map(|r| r.etag.clone()).unwrap_or_default();
+    snapshot.insert(
+        rel.to_string(),
+        FileState { etag, local_mtime: mtime_secs(&meta), size: meta.len() },
+    );
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,5 +469,44 @@ mod tests {
             run(Some(lf(10, 99)), Some(rf("e1")), Some(st("e1", 10, 1))),
             vec![Action::Upload("a.md".into())]
         );
+    }
+
+    #[test]
+    fn scan_local_skips_hidden_and_tmp_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("sub")).unwrap();
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        std::fs::write(root.join("a.md"), "hello").unwrap();
+        std::fs::write(root.join("sub/b.md"), "world!").unwrap();
+        std::fs::write(root.join(".hidden.md"), "x").unwrap();
+        std::fs::write(root.join(".git/config"), "x").unwrap();
+        std::fs::write(root.join("a.md.tmp"), "x").unwrap();
+
+        let files = scan_local(root).unwrap();
+        let keys: Vec<&String> = files.keys().collect();
+        assert_eq!(keys, vec!["a.md", "sub/b.md"]);
+        assert_eq!(files["a.md"].size, 5);
+        assert!(files["a.md"].mtime > 0);
+    }
+
+    #[test]
+    fn parent_dirs_lists_every_ancestor() {
+        assert_eq!(parent_dirs("a.md"), Vec::<String>::new());
+        assert_eq!(parent_dirs("x/y/z.md"), vec!["x".to_string(), "x/y".to_string()]);
+    }
+
+    #[test]
+    fn conflict_copy_gets_stamped_name_and_dedupes() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("sub")).unwrap();
+        let first = write_conflict_copy(root, "sub/note.md", b"remote").unwrap();
+        assert!(first.starts_with("sub/note (conflict "));
+        assert!(first.ends_with(".md"));
+        assert_eq!(std::fs::read(root.join(&first)).unwrap(), b"remote");
+        // second copy in the same minute must not overwrite the first
+        let second = write_conflict_copy(root, "sub/note.md", b"remote2").unwrap();
+        assert_ne!(first, second);
     }
 }
