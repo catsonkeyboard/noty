@@ -5,11 +5,11 @@ import { CheckIcon, FolderOpenIcon, RefreshCwIcon, XIcon } from "lucide-react";
 import { useUiStore } from "@/store/UiStore";
 import { useSettingsStore, type Theme } from "@/store/SettingsStore";
 import { useEditorStore } from "@/store/EditorStore";
-import { secretsApi } from "@/lib/tauri";
+import { secretsApi, syncApi } from "@/lib/tauri";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type Tab = "general" | "ai";
+type Tab = "general" | "ai" | "sync";
 
 const SettingsDialog = () => {
   const openState = useUiStore((s) => s.settingsOpen);
@@ -19,10 +19,16 @@ const SettingsDialog = () => {
     theme,
     llmBaseUrl,
     llmModel,
+    webdavUrl,
+    webdavUsername,
+    webdavRemoteDir,
+    webdavSyncOnStart,
+    webdavAutoSyncIntervalMins,
     setVaultPath,
     setTheme,
     setLlmBaseUrl,
     setLlmModel,
+    setWebdav,
   } = useSettingsStore();
 
   const [tab, setTab] = useState<Tab>("general");
@@ -30,12 +36,20 @@ const SettingsDialog = () => {
   const [keyInput, setKeyInput] = useState("");
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [davKeySet, setDavKeySet] = useState(false);
+  const [davKeyInput, setDavKeyInput] = useState("");
+  const [testState, setTestState] = useState<
+    { kind: "idle" } | { kind: "testing" } | { kind: "ok" } | { kind: "fail"; msg: string }
+  >({ kind: "idle" });
 
   useEffect(() => {
     if (openState) {
       setTab("general");
       setKeyInput("");
       secretsApi.hasApiKey().then(setKeySet).catch(() => {});
+      setDavKeyInput("");
+      setTestState({ kind: "idle" });
+      syncApi.hasWebdavPassword().then(setDavKeySet).catch(() => {});
     }
   }, [openState]);
 
@@ -76,6 +90,33 @@ const SettingsDialog = () => {
     }
   };
 
+  const saveDavKey = async () => {
+    const key = davKeyInput.trim();
+    if (!key) return;
+    await syncApi.setWebdavPassword(key);
+    setDavKeyInput("");
+    setDavKeySet(true);
+  };
+
+  const removeDavKey = async () => {
+    await syncApi.deleteWebdavPassword();
+    setDavKeySet(false);
+  };
+
+  const testConnection = async () => {
+    setTestState({ kind: "testing" });
+    try {
+      await syncApi.testConnection(
+        webdavUrl.trim(),
+        webdavUsername.trim(),
+        davKeyInput.trim() || null
+      );
+      setTestState({ kind: "ok" });
+    } catch (e) {
+      setTestState({ kind: "fail", msg: String(e) });
+    }
+  };
+
   const inputCls =
     "w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
 
@@ -99,7 +140,7 @@ const SettingsDialog = () => {
         </div>
 
         <div className="flex gap-1 border-b border-border px-3 pt-2">
-          {(["general", "ai"] as Tab[]).map((t) => (
+          {(["general", "ai", "sync"] as Tab[]).map((t) => (
             <button
               key={t}
               className={cn(
@@ -110,7 +151,7 @@ const SettingsDialog = () => {
               )}
               onClick={() => setTab(t)}
             >
-              {t === "general" ? "General" : "AI"}
+              {t === "general" ? "General" : t === "ai" ? "AI" : "Sync"}
             </button>
           ))}
         </div>
@@ -219,6 +260,118 @@ const SettingsDialog = () => {
                       Save
                     </Button>
                   </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {tab === "sync" && (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium">Server URL</label>
+                <input
+                  className={inputCls}
+                  value={webdavUrl}
+                  onChange={(e) => setWebdav({ webdavUrl: e.target.value })}
+                  placeholder="https://dav.jianguoyun.com/dav/"
+                  spellCheck={false}
+                />
+              </div>
+              <div className="flex gap-3">
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <label className="text-sm font-medium">Username</label>
+                  <input
+                    className={inputCls}
+                    value={webdavUsername}
+                    onChange={(e) => setWebdav({ webdavUsername: e.target.value })}
+                    placeholder="me@example.com"
+                    spellCheck={false}
+                  />
+                </div>
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <label className="text-sm font-medium">Remote folder</label>
+                  <input
+                    className={inputCls}
+                    value={webdavRemoteDir}
+                    onChange={(e) => setWebdav({ webdavRemoteDir: e.target.value })}
+                    placeholder="noty"
+                    spellCheck={false}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium">Password</label>
+                {davKeySet ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="flex items-center gap-1 text-green-600 dark:text-green-500">
+                      <CheckIcon size={14} /> Password is set (stored in system keychain)
+                    </span>
+                    <Button variant="outline" size="sm" onClick={removeDavKey}>
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      className={inputCls}
+                      type="password"
+                      value={davKeyInput}
+                      onChange={(e) => setDavKeyInput(e.target.value)}
+                      placeholder="App password"
+                      onKeyDown={(e) => e.key === "Enter" && saveDavKey()}
+                    />
+                    <Button size="sm" onClick={saveDavKey} disabled={!davKeyInput.trim()}>
+                      Save
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  For Jianguoyun (坚果云) use an app password from 账户信息 → 安全选项.
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={webdavSyncOnStart}
+                    onChange={(e) => setWebdav({ webdavSyncOnStart: e.target.checked })}
+                  />
+                  Sync on startup
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  Auto sync every
+                  <input
+                    className={cn(inputCls, "w-16 text-center")}
+                    type="number"
+                    min={0}
+                    value={webdavAutoSyncIntervalMins}
+                    onChange={(e) =>
+                      setWebdav({
+                        webdavAutoSyncIntervalMins: Math.max(0, Number(e.target.value) || 0),
+                      })
+                    }
+                  />
+                  min (0 = off)
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={testConnection}
+                  disabled={testState.kind === "testing" || !webdavUrl.trim()}
+                >
+                  {testState.kind === "testing" ? "Testing…" : "Test connection"}
+                </Button>
+                {testState.kind === "ok" && (
+                  <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-500">
+                    <CheckIcon size={14} /> Connected
+                  </span>
+                )}
+                {testState.kind === "fail" && (
+                  <span className="text-sm text-red-500" title={testState.msg}>
+                    {testState.msg}
+                  </span>
                 )}
               </div>
             </>
