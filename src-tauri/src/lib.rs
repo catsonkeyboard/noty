@@ -1,6 +1,7 @@
 mod config;
 mod llm;
 mod secrets;
+mod sync;
 mod vault;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
