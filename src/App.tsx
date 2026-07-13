@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import "./App.css";
 import AppBar from "./components/AppBar";
@@ -13,6 +13,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { useSettingsStore } from "@/store/SettingsStore";
 import { useVaultStore } from "@/store/VaultStore";
 import { useEditorStore } from "@/store/EditorStore";
+import { useSyncStore } from "@/store/SyncStore";
 
 function App() {
   const hydrated = useSettingsStore((s) => s.hydrated);
@@ -43,6 +44,28 @@ function App() {
       unlisten.then((fn) => fn());
     };
   }, []);
+
+  const webdavUrl = useSettingsStore((s) => s.webdavUrl);
+  const webdavSyncOnStart = useSettingsStore((s) => s.webdavSyncOnStart);
+  const webdavAutoSyncIntervalMins = useSettingsStore((s) => s.webdavAutoSyncIntervalMins);
+  const didStartSync = useRef(false);
+
+  // sync once on startup
+  useEffect(() => {
+    if (!hydrated || !vaultPath || !webdavUrl || !webdavSyncOnStart) return;
+    if (didStartSync.current) return;
+    didStartSync.current = true;
+    useSyncStore.getState().syncNow();
+  }, [hydrated, vaultPath, webdavUrl, webdavSyncOnStart]);
+
+  // periodic auto-sync; skipped while the editor has unsaved changes
+  useEffect(() => {
+    if (!hydrated || !vaultPath || !webdavUrl || !webdavAutoSyncIntervalMins) return;
+    const id = window.setInterval(() => {
+      if (!useEditorStore.getState().dirty) useSyncStore.getState().syncNow();
+    }, webdavAutoSyncIntervalMins * 60_000);
+    return () => window.clearInterval(id);
+  }, [hydrated, vaultPath, webdavUrl, webdavAutoSyncIntervalMins]);
 
   return (
     <ThemeProvider>
