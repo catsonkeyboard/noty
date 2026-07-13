@@ -15,20 +15,24 @@ pub struct FileState {
 /// path (vault-relative, '/'-separated) → state at last successful sync
 pub type Snapshot = BTreeMap<String, FileState>;
 
-/// fnv1a-64 of the vault path, so each vault gets its own snapshot file.
-fn vault_id(vault: &str) -> String {
+/// fnv1a-64 of the sync identity, so each (vault, server URL, remote dir)
+/// combination gets its own snapshot file. Including the sync target is a
+/// safety requirement: reusing a snapshot after the user points the same
+/// vault at a different server/folder would make the (empty) new target look
+/// like "remote deleted everything" and wipe the local vault.
+fn sync_id(key: &str) -> String {
     let mut h: u64 = 0xcbf29ce484222325;
-    for b in vault.as_bytes() {
+    for b in key.as_bytes() {
         h ^= u64::from(*b);
         h = h.wrapping_mul(0x100000001b3);
     }
     format!("{h:016x}")
 }
 
-pub fn snapshot_path(home: &Path, vault: &str) -> PathBuf {
+pub fn snapshot_path(home: &Path, vault: &str, url: &str, remote_dir: &str) -> PathBuf {
     home.join(".noty")
         .join("sync")
-        .join(format!("{}.json", vault_id(vault)))
+        .join(format!("{}.json", sync_id(&format!("{vault}\n{url}\n{remote_dir}"))))
 }
 
 pub fn load(path: &Path) -> Snapshot {
@@ -75,11 +79,15 @@ mod tests {
     }
 
     #[test]
-    fn snapshot_path_differs_per_vault() {
+    fn snapshot_path_differs_per_vault_and_sync_target() {
         let home = std::path::Path::new("/home/u");
-        let a = snapshot_path(home, "/vault/a");
-        let b = snapshot_path(home, "/vault/b");
-        assert_ne!(a, b);
+        let a = snapshot_path(home, "/vault/a", "https://dav.example.com/dav", "noty");
+        let other_vault = snapshot_path(home, "/vault/b", "https://dav.example.com/dav", "noty");
+        let other_url = snapshot_path(home, "/vault/a", "https://dav.other.com/dav", "noty");
+        let other_dir = snapshot_path(home, "/vault/a", "https://dav.example.com/dav", "notes");
+        assert_ne!(a, other_vault);
+        assert_ne!(a, other_url);
+        assert_ne!(a, other_dir);
         assert!(a.starts_with("/home/u/.noty/sync"));
         assert!(a.extension().is_some_and(|e| e == "json"));
     }

@@ -16,6 +16,7 @@ const summary = {
   conflicts: [],
   deletedLocal: [],
   deletedRemote: 0,
+  skippedDeletes: 0,
 };
 
 describe("SyncStore", () => {
@@ -31,6 +32,7 @@ describe("SyncStore", () => {
       lastSyncAt: null,
       progress: null,
       lastConflicts: [],
+      lastSkippedDeletes: 0,
     });
   });
 
@@ -59,5 +61,23 @@ describe("SyncStore", () => {
     useSyncStore.setState({ status: "syncing" });
     await useSyncStore.getState().syncNow();
     expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("records skipped deletes from the safety valve", async () => {
+    vi.mocked(invoke).mockResolvedValue({ ...summary, skippedDeletes: 3 });
+    await useSyncStore.getState().syncNow();
+    expect(useSyncStore.getState().lastSkippedDeletes).toBe(3);
+    expect(useSyncStore.getState().status).toBe("success");
+  });
+
+  it("claims the syncing slot synchronously to prevent re-entrancy", () => {
+    vi.mocked(invoke).mockResolvedValue(summary);
+    const first = useSyncStore.getState().syncNow();
+    // before the first call resolves, the status is already "syncing"
+    expect(useSyncStore.getState().status).toBe("syncing");
+    const second = useSyncStore.getState().syncNow();
+    return Promise.all([first, second]).then(() => {
+      expect(vi.mocked(invoke).mock.calls.filter(([cmd]) => cmd === "sync_now")).toHaveLength(1);
+    });
   });
 });

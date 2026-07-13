@@ -12,6 +12,7 @@ const SyncIndicator = () => {
   const lastSyncAt = useSyncStore((s) => s.lastSyncAt);
   const lastError = useSyncStore((s) => s.lastError);
   const lastConflicts = useSyncStore((s) => s.lastConflicts);
+  const lastSkippedDeletes = useSyncStore((s) => s.lastSkippedDeletes);
   const syncNow = useSyncStore((s) => s.syncNow);
   const configured = useSettingsStore((s) => Boolean(s.webdavUrl));
 
@@ -22,7 +23,9 @@ const SyncIndicator = () => {
       ? `Sync failed: ${lastError}`
       : status === "syncing" && progress
         ? `Syncing ${progress.current}/${progress.total}`
-        : lastConflicts.length > 0
+        : lastSkippedDeletes > 0
+          ? `Synced, but skipped ${lastSkippedDeletes} local deletion${lastSkippedDeletes === 1 ? "" : "s"} — the server returned an empty file list`
+          : lastConflicts.length > 0
           ? `Synced with ${lastConflicts.length} conflict cop${lastConflicts.length === 1 ? "y" : "ies"}:\n${lastConflicts.join("\n")}`
           : lastSyncAt
             ? `Last synced ${dayjs(lastSyncAt).format("HH:mm")}\nClick to sync`
@@ -42,7 +45,9 @@ const SyncIndicator = () => {
       ) : (
         <CloudIcon
           size={12}
-          className={lastConflicts.length > 0 ? "text-amber-500" : ""}
+          className={
+            lastConflicts.length > 0 || lastSkippedDeletes > 0 ? "text-amber-500" : ""
+          }
         />
       )}
       {status === "syncing" && progress && (

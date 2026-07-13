@@ -205,6 +205,36 @@ pub struct SyncSummary {
     pub conflicts: Vec<String>,
     pub deleted_local: Vec<String>,
     pub deleted_remote: u32,
+    /// Local deletions skipped by the empty-remote safety valve.
+    pub skipped_deletes: u32,
+}
+
+/// Safety valve: when the server listing came back empty but we have synced
+/// files before, "remote deleted everything" is far more likely a listing
+/// failure (404 quirk, href/root mismatch) than an intentional wipe — and
+/// executing it would erase the local vault. Keep everything else, drop the
+/// local deletes.
+fn strip_local_deletes_if_remote_vanished(
+    actions: Vec<Action>,
+    remote_empty: bool,
+    snapshot_empty: bool,
+) -> (Vec<Action>, u32) {
+    if !remote_empty || snapshot_empty {
+        return (actions, 0);
+    }
+    let mut skipped = 0;
+    let kept = actions
+        .into_iter()
+        .filter(|a| {
+            if matches!(a, Action::DeleteLocal(_)) {
+                skipped += 1;
+                false
+            } else {
+                true
+            }
+        })
+        .collect();
+    (kept, skipped)
 }
 
 #[derive(Serialize, Clone)]
@@ -233,12 +263,14 @@ pub async fn run_sync(
         .canonicalize()
         .map_err(|e| format!("vault not accessible: {e}"))?;
     let local = scan_local(&vault_root)?;
-    let snap_path = state::snapshot_path(home, vault);
+    let snap_path = state::snapshot_path(home, vault, &url, &remote_dir);
     let mut snapshot = state::load(&snap_path);
 
     let actions = plan(&local, &remote, &snapshot);
+    let (actions, skipped_deletes) =
+        strip_local_deletes_if_remote_vanished(actions, remote.is_empty(), snapshot.is_empty());
     let total = actions.len();
-    let mut summary = SyncSummary::default();
+    let mut summary = SyncSummary { skipped_deletes, ..Default::default() };
     let mut created_dirs: BTreeSet<String> = BTreeSet::new();
 
     for (i, action) in actions.iter().enumerate() {
@@ -314,12 +346,15 @@ async fn upload(
         }
     }
     let abs = vault_root.join(rel);
+    // stat BEFORE reading: if an editor save lands mid-upload, the recorded
+    // mtime is older than the file's, so the next sync re-uploads the edit
+    // instead of the snapshot silently claiming it was already synced
+    let meta = std::fs::metadata(&abs).map_err(|e| e.to_string())?;
     let bytes = std::fs::read(&abs).map_err(|e| e.to_string())?;
     let etag = match client.put(rel, bytes).await? {
         Some(etag) => etag,
         None => client.file_etag(rel).await?,
     };
-    let meta = std::fs::metadata(&abs).map_err(|e| e.to_string())?;
     snapshot.insert(
         rel.to_string(),
         FileState { etag, local_mtime: mtime_secs(&meta), size: meta.len() },
@@ -469,6 +504,31 @@ mod tests {
             run(Some(lf(10, 99)), Some(rf("e1")), Some(st("e1", 10, 1))),
             vec![Action::Upload("a.md".into())]
         );
+    }
+
+    #[test]
+    fn empty_remote_with_history_skips_local_deletes() {
+        let actions = vec![
+            Action::DeleteLocal("a.md".into()),
+            Action::Upload("b.md".into()),
+            Action::DeleteLocal("c.md".into()),
+        ];
+        let (kept, skipped) = strip_local_deletes_if_remote_vanished(actions, true, false);
+        assert_eq!(kept, vec![Action::Upload("b.md".into())]);
+        assert_eq!(skipped, 2);
+    }
+
+    #[test]
+    fn delete_guard_inactive_when_remote_has_files_or_on_first_sync() {
+        let actions = vec![Action::DeleteLocal("a.md".into()), Action::Upload("b.md".into())];
+        // remote has files → deletes are legitimate
+        let (kept, skipped) = strip_local_deletes_if_remote_vanished(actions.clone(), false, false);
+        assert_eq!(kept, actions);
+        assert_eq!(skipped, 0);
+        // first sync (empty snapshot) → nothing to protect
+        let (kept, skipped) = strip_local_deletes_if_remote_vanished(actions.clone(), true, true);
+        assert_eq!(kept, actions);
+        assert_eq!(skipped, 0);
     }
 
     #[test]
