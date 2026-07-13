@@ -13,6 +13,7 @@ pub struct AppConfig {
     pub theme: Option<String>,
     pub editor_width: Option<String>,
     pub llm: LlmConfig,
+    pub webdav: WebdavConfig,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
@@ -20,6 +21,16 @@ pub struct AppConfig {
 pub struct LlmConfig {
     pub base_url: Option<String>,
     pub model: Option<String>,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WebdavConfig {
+    pub url: Option<String>,
+    pub username: Option<String>,
+    pub remote_dir: Option<String>,
+    pub sync_on_start: Option<bool>,
+    pub auto_sync_interval_mins: Option<u32>,
 }
 
 fn config_file(home: &Path) -> PathBuf {
@@ -71,6 +82,13 @@ mod tests {
                 base_url: Some("http://localhost:11434/v1".into()),
                 model: Some("llama3".into()),
             },
+            webdav: WebdavConfig {
+                url: Some("https://dav.jianguoyun.com/dav/".into()),
+                username: Some("me@example.com".into()),
+                remote_dir: Some("noty".into()),
+                sync_on_start: Some(true),
+                auto_sync_interval_mins: Some(10),
+            },
         };
         save_to(&path, &config).unwrap();
         assert_eq!(load_from(&path), config);
@@ -78,6 +96,8 @@ mod tests {
         let raw = fs::read_to_string(&path).unwrap();
         assert!(raw.contains("\"vaultPath\""));
         assert!(raw.contains("\"baseUrl\""));
+        assert!(raw.contains("\"remoteDir\""));
+        assert!(raw.contains("\"autoSyncIntervalMins\""));
     }
 
     #[test]
