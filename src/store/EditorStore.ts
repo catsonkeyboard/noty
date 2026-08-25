@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Editor } from "@tiptap/core";
 import { vaultApi } from "@/lib/tauri";
 import type { Frontmatter } from "@/types/vault";
+import { pushClosed, pushRecent, reorder } from "./tabUtils";
 import { useSettingsStore } from "./SettingsStore";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -9,6 +10,10 @@ export type SaveStatus = "idle" | "saving" | "saved" | "error";
 type EditorState = {
   /** Open tabs, as note paths in display order. */
   tabs: string[];
+  /** Stack of closed tab paths, most recent last (for ⌘⇧T). */
+  closedTabs: string[];
+  /** Recently opened note paths, most recent first (palette empty state). */
+  recentPaths: string[];
   /** Path of the note currently shown, null when nothing is open. */
   activePath: string | null;
   frontmatter: Frontmatter | null;
@@ -33,7 +38,10 @@ type EditorState = {
    */
   openNote: (path: string, opts?: { newTab?: boolean }) => Promise<void>;
   closeTab: (path: string) => Promise<void>;
-  closeAll: () => void;
+  reopenTab: () => Promise<void>;
+  closeOthers: (path: string) => Promise<void>;
+  closeToRight: (path: string) => Promise<void>;
+  reorderTab: (from: number, to: number) => void;
   /** Re-read the active note from disk (after sync downloaded a new version). No-op when dirty. */
   reloadActive: () => Promise<void>;
   /** Called by the editor (debounced) with the current markdown. */
@@ -60,6 +68,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       const note = await vaultApi.readNote(v, path);
       set((s) => ({
         activePath: path,
+        recentPaths: pushRecent(s.recentPaths, path),
         frontmatter: note.frontmatter,
         body: note.body,
         liveBody: note.body,
@@ -75,6 +84,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
 
   return {
     tabs: [],
+    closedTabs: [],
+    recentPaths: [],
     activePath: null,
     frontmatter: null,
     body: "",
@@ -109,7 +120,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       if (index < 0) return;
       if (path === activePath && pendingFlush) await pendingFlush();
       const nextTabs = tabs.filter((t) => t !== path);
-      set({ tabs: nextTabs });
+      set((s) => ({ tabs: nextTabs, closedTabs: pushClosed(s.closedTabs, path) }));
       if (path === activePath) {
         const neighbor = nextTabs[Math.min(index, nextTabs.length - 1)];
         if (neighbor) {
@@ -130,6 +141,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     closeAll: () =>
       set({
         tabs: [],
+        closedTabs: [],
         activePath: null,
         frontmatter: null,
         body: "",
@@ -162,6 +174,34 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     },
 
     markDirty: (liveBody) => set({ dirty: true, liveBody }),
+
+    reopenTab: async () => {
+      const { closedTabs } = get();
+      const path = closedTabs[closedTabs.length - 1];
+      if (!path) return;
+      set((s) => ({ closedTabs: s.closedTabs.slice(0, -1) }));
+      await get().openNote(path, { newTab: true });
+    },
+
+    closeOthers: async (path) => {
+      const { tabs } = get();
+      if (!tabs.includes(path)) return;
+      set({ tabs: [path] });
+      if (get().activePath !== path) await loadNote(path);
+    },
+
+    closeToRight: async (path) => {
+      const { tabs } = get();
+      const index = tabs.indexOf(path);
+      if (index < 0) return;
+      set({ tabs: tabs.slice(0, index + 1) });
+      if (get().activePath && !get().tabs.includes(get().activePath!)) {
+        await loadNote(path);
+      }
+    },
+
+    reorderTab: (from, to) =>
+      set((s) => ({ tabs: reorder(s.tabs, from, to) })),
 
     handleRename: (oldPath, newPath) => {
       set((s) => ({
