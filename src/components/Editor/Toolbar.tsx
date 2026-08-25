@@ -9,6 +9,9 @@ import { useUiStore } from "@/store/UiStore";
 import { useSettingsStore } from "@/store/SettingsStore";
 import { useEditorStore } from "@/store/EditorStore";
 import { cn } from "@/lib/utils";
+import { buildCommands, titleWithShortcut } from "@/lib/commands";
+
+const cmd = (id: string) => buildCommands().find((c) => c.id === id)!;
 
 const ToolButton = ({
   title,
@@ -65,21 +68,21 @@ const Toolbar = () => {
         <MoveHorizontalIcon size={15} />
       </ToolButton>
       <ToolButton
-        title={viewMode === "rich" ? "Edit source markdown" : "Rich editor"}
+        title={titleWithShortcut(cmd("view.source-toggle"))}
         active={viewMode === "source"}
         onClick={toggleSource}
       >
         <FileCode2Icon size={15} />
       </ToolButton>
       <ToolButton
-        title="Outline"
+        title={titleWithShortcut(cmd("view.outline"))}
         active={rightPanel === "outline"}
         onClick={() => toggleRightPanel("outline")}
       >
         <ListTreeIcon size={15} />
       </ToolButton>
       <ToolButton
-        title="Properties"
+        title={titleWithShortcut(cmd("view.properties"))}
         active={rightPanel === "properties"}
         onClick={() => toggleRightPanel("properties")}
       >
