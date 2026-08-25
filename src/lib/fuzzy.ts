@@ -23,7 +23,7 @@ export function fuzzyMatch(query: string, target: string): FuzzyMatch {
   for (let ti = 0; ti < t.length && qi < q.length; ti++) {
     if (t[ti] !== q[qi]) continue;
     if (ti === 0) score += 15;
-    if (isBoundary(t, ti)) score += 10;
+    if (isBoundary(target, ti)) score += 10;
     if (ti === prevHit + 1) score += 12;
     if (qi === q.length - 1 && ti === t.length - 1) score += 5; // full-suffix finish
     prevHit = ti;

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronRightIcon } from "lucide-react";
 import { useSettingsStore } from "@/store/SettingsStore";
+import { useVaultStore } from "@/store/VaultStore";
 
 type Props = {
   path: string;
@@ -20,15 +21,22 @@ const Breadcrumb = ({ path, onRename }: Props) => {
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-0.5 text-sm">
-      {folders.map((folder, i) => (
-        <span
-          key={i}
-          className="flex shrink-0 items-center gap-0.5 text-muted-foreground"
-        >
-          <span className="max-w-32 truncate">{folder}</span>
-          <ChevronRightIcon size={13} className="shrink-0" />
-        </span>
-      ))}
+      {folders.map((folder, i) => {
+        const fullPath = vaultPath
+          ? `${vaultPath}/${folders.slice(0, i + 1).join("/")}`
+          : folder;
+        return (
+          <button
+            key={i}
+            className="flex shrink-0 items-center gap-0.5 text-muted-foreground hover:text-foreground"
+            title={`在侧栏中显示「${folder}」`}
+            onClick={() => useVaultStore.getState().revealPath(fullPath)}
+          >
+            <span className="max-w-32 truncate">{folder}</span>
+            <ChevronRightIcon size={13} className="shrink-0" />
+          </button>
+        );
+      })}
       <TitleInput key={path} fileName={fileName} onRename={onRename} />
     </div>
   );

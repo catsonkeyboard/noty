@@ -65,4 +65,18 @@ describe("isEditorFocused", () => {
   it("false when focus is outside .ProseMirror", () => {
     expect(isEditorFocused()).toBe(false);
   });
+
+  it("true when focus is inside .ProseMirror", () => {
+    const editor = document.createElement("div");
+    editor.className = "ProseMirror";
+    const child = document.createElement("p");
+    editor.appendChild(child);
+    document.body.appendChild(editor);
+    child.focus();
+    try {
+      expect(isEditorFocused()).toBe(true);
+    } finally {
+      editor.remove();
+    }
+  });
 });
