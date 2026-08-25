@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef } from "react";
+import { NotebookPenIcon } from "lucide-react";
 import { useEditorStore } from "@/store/EditorStore";
 import { useVaultStore } from "@/store/VaultStore";
 import { useUiStore } from "@/store/UiStore";
 import { useSettingsStore } from "@/store/SettingsStore";
+import { Button } from "@/components/ui/button";
+import { buildCommands } from "@/lib/commands";
 import RightPanel from "@/components/RightPanel";
 import NoteEditor from "./NoteEditor";
 import SourceEditor from "./SourceEditor";
@@ -98,11 +101,36 @@ const EditorArea = () => {
             <RightPanel />
           </div>
         </>
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-          Select or create a note to start writing.
-        </div>
-      )}
+) : (
+  <div className="flex h-full w-full items-center justify-center">
+    <div className="flex w-[320px] flex-col items-center gap-4 rounded-xl border border-border bg-card p-8 text-card-foreground shadow-warm">
+      <NotebookPenIcon size={32} className="text-muted-foreground" />
+      <div className="text-center">
+        <p className="text-sm font-semibold">开始书写</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          新建一篇笔记，或搜索已有内容。
+        </p>
+      </div>
+      <div className="flex w-full flex-col gap-2">
+        <Button
+          onClick={() =>
+            void buildCommands()
+              .find((c) => c.id === "file.new-note")!
+              .run()
+          }
+        >
+          新建笔记
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => useUiStore.getState().setSearchOpen(true)}
+        >
+          搜索笔记
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
