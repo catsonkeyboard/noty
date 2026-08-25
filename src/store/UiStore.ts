@@ -14,6 +14,8 @@ type UiStoreProps = {
   viewMode: ViewMode;
   /** Ephemeral error/status message shown in the status bar. */
   toast: string | null;
+  /** Empty-state card dismissed this session; collapses it to a quiet hint. */
+  emptyHintDismissed: boolean;
   setFocusMode: () => void;
   setSearchOpen: (open: boolean) => void;
   setPaletteOpen: (open: boolean) => void;
@@ -22,6 +24,7 @@ type UiStoreProps = {
   toggleRightPanel: (mode: Exclude<RightPanelMode, null>) => void;
   setViewMode: (mode: ViewMode) => void;
   showToast: (message: string) => void;
+  dismissEmptyHint: () => void;
 };
 
 /** Platform timer handle: NodeJS.Timeout under vitest/node, number in the DOM runtime. */
@@ -36,6 +39,7 @@ export const useUiStore = create<UiStoreProps>()((set) => ({
   rightPanel: null,
   viewMode: "rich",
   toast: null,
+  emptyHintDismissed: false,
   setFocusMode: () => set((state) => ({ focusMode: !state.focusMode })),
   setSearchOpen: (open) => set(() => ({ searchOpen: open })),
   setPaletteOpen: (open) => set(() => ({ paletteOpen: open })),
@@ -49,4 +53,5 @@ export const useUiStore = create<UiStoreProps>()((set) => ({
     set({ toast: message });
     toastTimer = setTimeout(() => set({ toast: null }), 3000);
   },
+  dismissEmptyHint: () => set({ emptyHintDismissed: true }),
 }));

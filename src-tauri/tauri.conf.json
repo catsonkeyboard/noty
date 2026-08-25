@@ -48,8 +48,7 @@
     "withGlobalTauri": false,
     "windows": [
       {
-        "decorations": false,
-        "fullscreen": false,
+        "decorations": true,
         "height": 800,
         "resizable": true,
         "title": "noty",
