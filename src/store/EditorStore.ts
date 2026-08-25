@@ -40,6 +40,7 @@ type EditorState = {
   closeTab: (path: string) => Promise<void>;
   reopenTab: () => Promise<void>;
   closeOthers: (path: string) => Promise<void>;
+  closeAll: () => void;
   closeToRight: (path: string) => Promise<void>;
   reorderTab: (from: number, to: number) => void;
   /** Re-read the active note from disk (after sync downloaded a new version). No-op when dirty. */
