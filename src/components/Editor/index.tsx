@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
-import { NotebookPenIcon } from "lucide-react";
+import { NotebookPenIcon, XIcon } from "lucide-react";
+import { formatShortcut } from "@/lib/hotkeys";
 import { useEditorStore } from "@/store/EditorStore";
 import { useVaultStore } from "@/store/VaultStore";
 import { useUiStore } from "@/store/UiStore";
@@ -25,6 +26,8 @@ const EditorArea = () => {
   const handleRename = useEditorStore((s) => s.handleRename);
   const rename = useVaultStore((s) => s.rename);
   const viewMode = useUiStore((s) => s.viewMode);
+  const emptyHintDismissed = useUiStore((s) => s.emptyHintDismissed);
+  const dismissEmptyHint = useUiStore((s) => s.dismissEmptyHint);
   const wide = useSettingsStore((s) => s.editorWidth) === "wide";
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,6 +67,16 @@ const EditorArea = () => {
     [markDirty, save]
   );
 
+  // Esc dismisses the empty-state card (click-outside handled on the backdrop)
+  useEffect(() => {
+    if (activePath || emptyHintDismissed) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismissEmptyHint();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activePath, emptyHintDismissed, dismissEmptyHint]);
+
   const onRenameTitle = async (newName: string) => {
     if (!activePath) return;
     await flush();
@@ -101,9 +114,27 @@ const EditorArea = () => {
             <RightPanel />
           </div>
         </>
+) : emptyHintDismissed ? (
+  <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+    {formatShortcut("mod+n")} 新建笔记 · {formatShortcut("mod+k")} 搜索 ·{" "}
+    {formatShortcut("mod+p")} 命令面板
+  </div>
 ) : (
-  <div className="flex h-full w-full items-center justify-center">
-    <div className="flex w-[320px] flex-col items-center gap-4 rounded-xl border border-border bg-card p-8 text-card-foreground shadow-warm">
+  <div
+    className="flex h-full w-full items-center justify-center"
+    onClick={dismissEmptyHint}
+  >
+    <div
+      className="relative flex w-[320px] flex-col items-center gap-4 rounded-xl border border-border bg-card p-8 text-card-foreground shadow-warm"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        className="absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-md text-muted-foreground hover:bg-accent/10 hover:text-foreground"
+        title="关闭 (Esc)"
+        onClick={dismissEmptyHint}
+      >
+        <XIcon size={14} />
+      </button>
       <NotebookPenIcon size={32} className="text-muted-foreground" />
       <div className="text-center">
         <p className="text-sm font-semibold">开始书写</p>

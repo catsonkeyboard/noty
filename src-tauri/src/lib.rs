@@ -7,20 +7,25 @@ mod vault;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-    .setup(|app| {
-        #[cfg(target_os = "macos")]
-        {
+        .setup(|app| {
             use tauri::Manager;
+            #[cfg(target_os = "macos")]
             if let Some(win) = app.get_webview_window("main") {
+                // overlay traffic lights on the transparent drag region drawn by AppBar;
+                // decorations must stay enabled on macOS or the TITLED mask is gone
+                // and the traffic lights cannot exist.
                 let _ = win.set_title_bar_style(tauri::TitleBarStyle::Overlay);
+                let _ = win.set_title("");
             }
-        }
-        #[cfg(not(target_os = "macos"))]
-        {
-            let _ = app; // silence unused on non-mac builds
-        }
-        Ok(())
-    })
+            #[cfg(not(target_os = "macos"))]
+            {
+                // keep the old frameless look on Windows/Linux
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.set_decorations(false);
+                }
+            }
+            Ok(())
+        })
         .plugin(tauri_plugin_dialog::init())
         .manage(llm::LlmState::default())
         .manage(sync::SyncGuard::default())
