@@ -7,6 +7,20 @@ mod vault;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+    .setup(|app| {
+        #[cfg(target_os = "macos")]
+        {
+            use tauri::Manager;
+            if let Some(win) = app.get_webview_window("main") {
+                let _ = win.set_title_bar_style(tauri::TitleBarStyle::Overlay);
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            let _ = app; // silence unused on non-mac builds
+        }
+        Ok(())
+    })
         .plugin(tauri_plugin_dialog::init())
         .manage(llm::LlmState::default())
         .manage(sync::SyncGuard::default())

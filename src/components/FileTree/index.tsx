@@ -5,9 +5,12 @@ import { useUiStore } from "@/store/UiStore";
 import { useVaultStore } from "@/store/VaultStore";
 import { useEditorStore } from "@/store/EditorStore";
 import { useSettingsStore } from "@/store/SettingsStore";
+import { buildCommands, titleWithShortcut } from "@/lib/commands";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import TreeItem from "./TreeItem";
 import { dirPaths, filterTree } from "./filterTree";
+
+const cmd = (id: string) => buildCommands().find((c) => c.id === id)!;
 
 const FileTree = () => {
   const { focusMode, setSearchOpen } = useUiStore();
@@ -58,14 +61,14 @@ const FileTree = () => {
               <div className="flex items-center gap-1 text-muted-foreground">
                 <button
                   className="grid h-7 w-7 place-items-center rounded-md hover:bg-accent hover:text-accent-foreground"
-                  title="Search (⌘K)"
+                  title={titleWithShortcut(cmd("search.toggle"))}
                   onClick={() => setSearchOpen(true)}
                 >
                   <SearchIcon size={15} />
                 </button>
                 <button
                   className="grid h-7 w-7 place-items-center rounded-md hover:bg-accent hover:text-accent-foreground"
-                  title="New note"
+                  title={titleWithShortcut(cmd("file.new-note"))}
                   onClick={onNewNote}
                 >
                   <FilePlusIcon size={15} />
