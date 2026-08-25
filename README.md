@@ -21,6 +21,16 @@ Your notes are plain `.md` files in a folder you choose (your **vault**) — no 
   - API key is stored in the **system keychain**, never on disk
 - **Quality of life** — breadcrumb navigation, word count and vault switcher in the status bar, adjustable editor width, dark/light/system theme, auto-save with debounce
 
+## Keyboard Shortcuts
+
+| Shortcut | Action | Shortcut | Action |
+| --- | --- | --- | --- |
+| `Cmd/Ctrl+N` / `Cmd/Ctrl+Shift+N` | New note / new folder | `Cmd/Ctrl+K` / `Cmd/Ctrl+P` | Search / command palette |
+| `Cmd/Ctrl+B` / `Cmd/Ctrl+Shift+B` | Toggle sidebar (use `Shift+B` inside the editor) | `Cmd/Ctrl+E` | Source mode |
+| `Cmd/Ctrl+W` / `Cmd/Ctrl+Shift+W` / `Cmd/Ctrl+Shift+T` | Close tab / close all / reopen | `Cmd/Ctrl+1`–`9` / `Cmd/Ctrl+Alt+←→` | Switch tabs |
+| `Cmd/Ctrl+\` / `Cmd/Ctrl+Shift+\` | Outline / properties panel | `Cmd/Ctrl+S` | Save now |
+| `Cmd/Ctrl+,` | Settings | `Cmd/Ctrl+Shift+F` | Ask AI |
+
 ## Getting Started
 
 ### Prerequisites
