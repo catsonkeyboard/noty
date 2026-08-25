@@ -92,7 +92,7 @@ const SearchBar = () => {
       onClick={() => setOpen(false)}
     >
       <div
-        className="w-[560px] max-w-[90vw] overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg"
+        className="w-[560px] max-w-[90vw] overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-warm"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 border-b border-border px-3">
