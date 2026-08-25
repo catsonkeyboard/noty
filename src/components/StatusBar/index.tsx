@@ -5,6 +5,7 @@ import { useSettingsStore } from "@/store/SettingsStore";
 import { useEditorStore } from "@/store/EditorStore";
 import { useSyncStore } from "@/store/SyncStore";
 import { countWords } from "@/lib/words";
+import { useUiStore } from "@/store/UiStore";
 
 const SyncIndicator = () => {
   const status = useSyncStore((s) => s.status);
@@ -66,6 +67,7 @@ const StatusBar = () => {
   const activePath = useEditorStore((s) => s.activePath);
   const liveBody = useEditorStore((s) => s.liveBody);
   const frontmatter = useEditorStore((s) => s.frontmatter);
+  const toast = useUiStore((s) => s.toast);
 
   if (!vaultPath) return null;
   const vaultName = vaultPath.split("/").pop() ?? vaultPath;
@@ -81,7 +83,12 @@ const StatusBar = () => {
   };
 
   return (
-    <footer className="flex h-6 w-full shrink-0 items-center justify-between border-t border-border bg-background px-3 text-xs text-muted-foreground select-none">
+    <footer className="relative flex h-6 w-full shrink-0 items-center justify-between border-t border-border bg-background px-3 text-xs text-muted-foreground select-none">
+      {toast && (
+        <span className="absolute left-1/2 -translate-x-1/2 truncate text-destructive">
+          {toast}
+        </span>
+      )}
       <div className="flex items-center gap-1">
         <button
           className="flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-accent hover:text-accent-foreground"

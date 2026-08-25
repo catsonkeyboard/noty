@@ -1,3 +1,5 @@
+import { useHotkeys } from "@/hooks/useHotkeys";
+import CommandPalette from "@/components/CommandPalette";
 import { useEffect, useRef } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import "./App.css";
@@ -20,6 +22,7 @@ function App() {
   const vaultPath = useSettingsStore((s) => s.vaultPath);
   const hydrate = useSettingsStore((s) => s.hydrate);
   const loadTree = useVaultStore((s) => s.loadTree);
+  useHotkeys();
 
   useEffect(() => {
     hydrate();
@@ -84,6 +87,7 @@ function App() {
               ) : (
                 <VaultPicker />
               )}
+              <CommandPalette />
               <SettingsDialog />
             </div>
             <StatusBar />
