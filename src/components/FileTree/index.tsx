@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { FilePlusIcon, FolderPlusIcon, SearchIcon } from "lucide-react";
 import { useUiStore } from "@/store/UiStore";
@@ -6,13 +7,21 @@ import { useEditorStore } from "@/store/EditorStore";
 import { useSettingsStore } from "@/store/SettingsStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import TreeItem from "./TreeItem";
+import { dirPaths, filterTree } from "./filterTree";
 
 const FileTree = () => {
   const { focusMode, setSearchOpen } = useUiStore();
   const vaultPath = useSettingsStore((s) => s.vaultPath);
-  const { tree, error, createNote, createFolder, move } = useVaultStore();
+  const { tree, error, createNote, createFolder, move, expandDir } = useVaultStore();
   const openNote = useEditorStore((s) => s.openNote);
   const handleRename = useEditorStore((s) => s.handleRename);
+  const [filter, setFilter] = useState<string>("");
+  const shown = filter.trim() ? filterTree(tree, filter.trim()) : tree;
+  const applyFilter = (value: string) => {
+    setFilter(value);
+    const q = value.trim();
+    if (q) for (const p of dirPaths(filterTree(tree, q))) expandDir(p);
+  };
 
   if (!vaultPath) return null;
   const vaultName = vaultPath.split("/").pop() ?? "Vault";
@@ -70,6 +79,17 @@ const FileTree = () => {
                 </button>
               </div>
             </div>
+            <div className="px-3 pb-1">
+              <input
+                className="h-7 w-full rounded-md border border-input bg-background px-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
+                placeholder="过滤文件…"
+                value={filter}
+                onChange={(e) => applyFilter(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setFilter("");
+                }}
+              />
+            </div>
             {error && (
               <div className="mx-3 my-1 rounded bg-destructive/10 p-2 text-xs text-destructive">
                 {error}
@@ -81,12 +101,12 @@ const FileTree = () => {
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={onRootDrop}
               >
-                {tree.map((node) => (
+                {shown.map((node) => (
                   <TreeItem key={node.path} node={node} depth={0} />
                 ))}
-                {tree.length === 0 && (
+                {shown.length === 0 && (
                   <p className="px-2 py-4 text-xs text-muted-foreground">
-                    No notes yet. Create one with the + button.
+                    {filter.trim() ? "没有匹配的文件。" : "No notes yet. Create one with the + button."}
                   </p>
                 )}
               </div>

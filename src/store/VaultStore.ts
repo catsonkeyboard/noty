@@ -8,9 +8,12 @@ type VaultState = {
   expandedDirs: Set<string>;
   loading: boolean;
   error: string | null;
+  /** Path briefly highlighted after Breadcrumb reveal (null = none). */
+  revealedPath: string | null;
   loadTree: () => Promise<void>;
   toggleDir: (path: string) => void;
   expandDir: (path: string) => void;
+  revealPath: (path: string) => void;
   createNote: (dir: string, title: string) => Promise<string | null>;
   createFolder: (dir: string, name: string) => Promise<void>;
   rename: (path: string, newName: string) => Promise<string | null>;
@@ -20,11 +23,14 @@ type VaultState = {
 
 const vault = () => useSettingsStore.getState().vaultPath;
 
+let revealTimer: NodeJS.Timeout | number | null = null;
+
 export const useVaultStore = create<VaultState>()((set, get) => ({
   tree: [],
   expandedDirs: new Set<string>(),
   loading: false,
   error: null,
+  revealedPath: null,
 
   loadTree: async () => {
     const v = vault();
@@ -49,6 +55,22 @@ export const useVaultStore = create<VaultState>()((set, get) => ({
     const expanded = new Set(get().expandedDirs);
     expanded.add(path);
     set({ expandedDirs: expanded });
+  },
+
+  revealPath: (path) => {
+    const { expandedDirs } = get();
+    const next = new Set(expandedDirs);
+    // expand the dir itself and all its ancestors
+    let cur = path;
+    while (cur.includes("/")) {
+      next.add(cur);
+      cur = cur.slice(0, cur.lastIndexOf("/"));
+    }
+    set({ expandedDirs: next, revealedPath: path });
+    // clear the highlight after a beat; replacing the timer keeps
+    // rapid re-reveals of the same path highlighted for the full span
+    if (revealTimer) clearTimeout(revealTimer);
+    revealTimer = setTimeout(() => set({ revealedPath: null }), 1200);
   },
 
   createNote: async (dir, title) => {

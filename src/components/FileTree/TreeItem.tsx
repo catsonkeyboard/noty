@@ -32,7 +32,7 @@ type Props = {
 };
 
 const TreeItem = ({ node, depth }: Props) => {
-  const { expandedDirs, toggleDir, createNote, createFolder, rename, remove, move } =
+  const { expandedDirs, revealedPath, toggleDir, createNote, createFolder, rename, remove, move } =
     useVaultStore();
   const activePath = useEditorStore((s) => s.activePath);
   const openNote = useEditorStore((s) => s.openNote);
@@ -46,6 +46,12 @@ const TreeItem = ({ node, depth }: Props) => {
 
   const expanded = expandedDirs.has(node.path);
   const displayName = node.is_dir ? node.name : node.name.replace(/\.md$/, "");
+  const revealed = revealedPath === node.path;
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (revealed) itemRef.current?.scrollIntoView({ block: "center" });
+  }, [revealed]);
 
   useEffect(() => {
     if (editing) {
@@ -89,6 +95,7 @@ const TreeItem = ({ node, depth }: Props) => {
       <ContextMenu>
         <ContextMenuTrigger>
           <div
+            ref={itemRef}
             draggable={!editing}
             onDragStart={(e) => {
               e.dataTransfer.setData("noty/path", node.path);
@@ -110,7 +117,8 @@ const TreeItem = ({ node, depth }: Props) => {
               "flex items-center gap-1.5 rounded-md px-2 py-1 text-sm cursor-pointer select-none",
               "hover:bg-accent hover:text-accent-foreground",
               activePath === node.path && "bg-muted",
-              dragOver && "bg-accent ring-1 ring-ring"
+              dragOver && "bg-accent ring-1 ring-ring",
+              revealed && "bg-accent/15"
             )}
             style={{ paddingLeft: `${8 + depth * 14}px` }}
           >

@@ -1,7 +1,19 @@
-import { Fragment } from "react";
-import { XIcon } from "lucide-react";
+import { Fragment, useState } from "react";
+import { PlusIcon, XIcon } from "lucide-react";
 import { useEditorStore } from "@/store/EditorStore";
+import { useVaultStore } from "@/store/VaultStore";
+import { useSettingsStore } from "@/store/SettingsStore";
+import { buildCommands, titleWithShortcut } from "@/lib/commands";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
+
+const cmd = (id: string) => buildCommands().find((c) => c.id === id);
 
 const TabBar = () => {
   const tabs = useEditorStore((s) => s.tabs);
@@ -9,8 +21,20 @@ const TabBar = () => {
   const dirty = useEditorStore((s) => s.dirty);
   const openNote = useEditorStore((s) => s.openNote);
   const closeTab = useEditorStore((s) => s.closeTab);
+  const closeOthers = useEditorStore((s) => s.closeOthers);
+  const closeToRight = useEditorStore((s) => s.closeToRight);
+  const reorderTab = useEditorStore((s) => s.reorderTab);
+  const createNote = useVaultStore((s) => s.createNote);
+  const vaultPath = useSettingsStore((s) => s.vaultPath);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   if (tabs.length === 0) return null;
+
+  const onNewNote = async () => {
+    if (!vaultPath) return;
+    const path = await createNote(vaultPath, "Untitled");
+    if (path) openNote(path, { newTab: true });
+  };
 
   return (
     <div className="noty-tabbar flex h-9 shrink-0 items-end overflow-x-auto border-b border-border bg-muted/40 px-2">
@@ -26,55 +50,94 @@ const TabBar = () => {
               <span
                 className={cn(
                   "mb-2 h-4 w-px shrink-0 bg-muted-foreground/30",
-                  (active || prevActive) && "opacity-0"
+                  (active || prevActive) && "opacity-0",
                 )}
               />
             )}
-            <div
-              className={cn(
-                // flexible width: tabs shrink evenly when the window narrows,
-                // but never change size on selection
-                "group relative flex h-8 min-w-20 max-w-40 flex-1 basis-40 cursor-pointer items-center gap-1.5 rounded-t-md border border-b-0 px-2.5 text-sm",
-                active
-                  ? "border-border bg-background text-foreground"
-                  : "border-transparent text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground"
-              )}
-              title={path}
-              onClick={() => openNote(path)}
-              onAuxClick={(e) => {
-                // middle-click closes the tab
-                if (e.button === 1) closeTab(path);
-              }}
-            >
-              {active && (
-                <span className="absolute inset-x-2 top-0 h-0.5 rounded-full bg-primary" />
-              )}
-              <span className="min-w-0 flex-1 truncate">{name}</span>
-              <span className="relative grid h-4 w-4 shrink-0 place-items-center">
-                <button
-                  className={cn(
-                    "absolute inset-0 grid place-items-center rounded hover:bg-muted",
-                    showDot
-                      ? "opacity-0 group-hover:opacity-100"
-                      : active
-                        ? "opacity-60 hover:opacity-100"
-                        : "opacity-0 group-hover:opacity-60 hover:opacity-100"
-                  )}
-                  onClick={(e) => {
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <div
+                  draggable
+                  onDragStart={(e) => {
+                    setDragIndex(i);
+                    e.dataTransfer.setData("noty/tab-index", String(i));
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
-                    closeTab(path);
+                    const from = Number(e.dataTransfer.getData("noty/tab-index"));
+                    if (!Number.isNaN(from)) reorderTab(from, i);
+                    setDragIndex(null);
+                  }}
+                  onDragEnd={() => setDragIndex(null)}
+                  className={cn(
+                    // flexible width: tabs shrink evenly when the window narrows,
+                    // but never change size on selection
+                    "group relative flex h-8 min-w-20 max-w-40 flex-1 basis-40 cursor-pointer items-center gap-1.5 rounded-t-md border border-b-0 px-2.5 text-sm",
+                    dragIndex === i && "opacity-40",
+                    active
+                      ? "border-border bg-background text-foreground"
+                      : "border-transparent text-muted-foreground hover:bg-accent/10 hover:text-foreground",
+                  )}
+                  title={path}
+                  onClick={() => openNote(path)}
+                  onAuxClick={(e) => {
+                    // middle-click closes the tab
+                    if (e.button === 1) closeTab(path);
                   }}
                 >
-                  <XIcon size={12} />
-                </button>
-                {showDot && (
-                  <span className="pointer-events-none h-1.5 w-1.5 rounded-full bg-primary group-hover:opacity-0" />
-                )}
-              </span>
-            </div>
+                  {active && (
+                    <span className="absolute inset-x-2 top-0 h-0.5 rounded-full bg-accent" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate">{name}</span>
+                  <span className="relative grid h-4 w-4 shrink-0 place-items-center">
+                    <button
+                      className={cn(
+                        "absolute inset-0 grid place-items-center rounded hover:bg-muted",
+                        showDot
+                          ? "opacity-0 group-hover:opacity-100"
+                          : active
+                            ? "opacity-60 hover:opacity-100"
+                            : "opacity-0 group-hover:opacity-60 hover:opacity-100",
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(path);
+                      }}
+                    >
+                      <XIcon size={12} />
+                    </button>
+                    {showDot && (
+                      <span className="pointer-events-none h-1.5 w-1.5 rounded-full bg-accent group-hover:opacity-0" />
+                    )}
+                  </span>
+                </div>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem onClick={() => void closeTab(path)}>关闭</ContextMenuItem>
+                <ContextMenuItem onClick={() => void closeOthers(path)}>关闭其他</ContextMenuItem>
+                <ContextMenuItem onClick={() => void closeToRight(path)}>关闭右侧</ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  disabled={!cmd("tab.reopen")?.when?.()}
+                  onClick={() => void cmd("tab.reopen")?.run()}
+                >
+                  恢复关闭的标签
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           </Fragment>
         );
       })}
+      <button
+        className="mb-2 ml-1 grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent/10 hover:text-foreground"
+        title={titleWithShortcut(cmd("file.new-note")!)}
+        onClick={() => void onNewNote()}
+      >
+        <PlusIcon size={14} />
+      </button>
     </div>
   );
 };
