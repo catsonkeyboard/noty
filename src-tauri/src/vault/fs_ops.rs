@@ -189,14 +189,42 @@ pub fn rename_entry(vault: String, path: String, new_name: String) -> Result<Str
     Ok(target.to_string_lossy().into_owned())
 }
 
+/// Soft-delete: move the entry into `<vault>/.trash/` instead of removing it
+/// from disk. The hidden `.trash` dir is skipped by listing, search and sync.
+/// Entries already inside `.trash` (or `.trash` itself) are removed for real.
 #[tauri::command]
 pub fn delete_entry(vault: String, path: String) -> Result<(), String> {
     let path = resolve_in_vault(&vault, &path)?;
-    if path.is_dir() {
-        fs::remove_dir_all(&path).map_err(|e| e.to_string())
-    } else {
-        fs::remove_file(&path).map_err(|e| e.to_string())
+    if !path.exists() {
+        return Err("entry does not exist".to_string());
     }
+    let vault_root = Path::new(&vault)
+        .canonicalize()
+        .map_err(|e| format!("vault not accessible: {e}"))?;
+    let trash = vault_root.join(".trash");
+
+    if path.starts_with(&trash) {
+        return if path.is_dir() {
+            fs::remove_dir_all(&path).map_err(|e| e.to_string())
+        } else {
+            fs::remove_file(&path).map_err(|e| e.to_string())
+        };
+    }
+
+    fs::create_dir_all(&trash).map_err(|e| e.to_string())?;
+    let name = path
+        .file_name()
+        .ok_or_else(|| "invalid path".to_string())?
+        .to_string_lossy()
+        .into_owned();
+    let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
+    let mut target = trash.join(format!("{stamp} {name}"));
+    let mut i = 1;
+    while target.exists() {
+        target = trash.join(format!("{stamp} {name} ({i})"));
+        i += 1;
+    }
+    fs::rename(&path, &target).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -241,5 +269,65 @@ mod tests {
         fs::write(dir.path().join("Note 1.md"), "").unwrap();
         let p = dedupe_path(dir.path(), "Note", Some("md"));
         assert_eq!(p.file_name().unwrap().to_str().unwrap(), "Note 2.md");
+    }
+
+    #[test]
+    fn delete_moves_to_trash_and_list_vault_hides_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let vault = dir.path().join("vault");
+        fs::create_dir_all(vault.join("sub")).unwrap();
+        fs::write(vault.join("sub/note.md"), "hi").unwrap();
+
+        delete_entry(
+            vault.to_string_lossy().into_owned(),
+            vault.join("sub/note.md").to_string_lossy().into_owned(),
+        )
+        .unwrap();
+
+        let trash = vault.join(".trash");
+        assert!(!vault.join("sub/note.md").exists());
+        assert_eq!(
+            fs::read_dir(&trash).unwrap().flatten().count(),
+            1,
+            "one entry in .trash"
+        );
+        // the trashed file keeps its content
+        let trashed: Vec<_> = fs::read_dir(&trash).unwrap().flatten().collect();
+        assert!(trashed[0].path().is_file());
+        let content = fs::read_to_string(&trashed[0].path()).unwrap();
+        assert_eq!(content, "hi");
+        // listing skips the hidden .trash dir entirely
+        let tree = list_vault(vault.to_string_lossy().into_owned()).unwrap();
+        let names: Vec<String> = tree.iter().map(|n| n.name.clone()).collect();
+        assert!(!names.contains(&".trash".to_string()));
+    }
+
+    #[test]
+    fn deleting_trashed_entry_removes_it_for_real() {
+        let dir = tempfile::tempdir().unwrap();
+        let vault = dir.path().join("vault");
+        fs::create_dir_all(vault.join(".trash")).unwrap();
+        let trashed = vault.join(".trash/20260101-000000 note.md");
+        fs::write(&trashed, "bye").unwrap();
+
+        delete_entry(
+            vault.to_string_lossy().into_owned(),
+            trashed.to_string_lossy().into_owned(),
+        )
+        .unwrap();
+
+        assert!(!trashed.exists(), "second delete is permanent");
+    }
+
+    #[test]
+    fn deleting_missing_entry_errors() {
+        let dir = tempfile::tempdir().unwrap();
+        let vault = dir.path().join("vault");
+        fs::create_dir_all(&vault).unwrap();
+        assert!(delete_entry(
+            vault.to_string_lossy().into_owned(),
+            vault.join("nope.md").to_string_lossy().into_owned(),
+        )
+        .is_err());
     }
 }

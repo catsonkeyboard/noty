@@ -29,6 +29,7 @@ const EditorArea = () => {
   const emptyHintDismissed = useUiStore((s) => s.emptyHintDismissed);
   const dismissEmptyHint = useUiStore((s) => s.dismissEmptyHint);
   const wide = useSettingsStore((s) => s.editorWidth) === "wide";
+  const t = useSettingsStore((s) => s.t);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef<string | null>(null);
@@ -116,8 +117,8 @@ const EditorArea = () => {
         </>
 ) : emptyHintDismissed ? (
   <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-    {formatShortcut("mod+n")} 新建笔记 · {formatShortcut("mod+k")} 搜索 ·{" "}
-    {formatShortcut("mod+p")} 命令面板
+    {formatShortcut("mod+n")} {t.newNote} · {formatShortcut("mod+k")} {t.cmdSearch} ·{" "}
+    {formatShortcut("mod+p")} {t.cmdPalette}
   </div>
 ) : (
   <div
@@ -130,16 +131,16 @@ const EditorArea = () => {
     >
       <button
         className="absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-md text-muted-foreground hover:bg-accent/10 hover:text-foreground"
-        title="关闭 (Esc)"
+        title={t.closeEsc}
         onClick={dismissEmptyHint}
       >
         <XIcon size={14} />
       </button>
       <NotebookPenIcon size={32} className="text-muted-foreground" />
       <div className="text-center">
-        <p className="text-sm font-semibold">开始书写</p>
+        <p className="text-sm font-semibold">{t.startWriting}</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          新建一篇笔记，或搜索已有内容。
+          {t.emptyHintDesc}
         </p>
       </div>
       <div className="flex w-full flex-col gap-2">
@@ -150,13 +151,13 @@ const EditorArea = () => {
               .run()
           }
         >
-          新建笔记
+          {t.newNote}
         </Button>
         <Button
           variant="outline"
           onClick={() => useUiStore.getState().setSearchOpen(true)}
         >
-          搜索笔记
+          {t.searchNotes}
         </Button>
       </div>
     </div>

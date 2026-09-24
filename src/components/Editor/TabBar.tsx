@@ -26,6 +26,7 @@ const TabBar = () => {
   const reorderTab = useEditorStore((s) => s.reorderTab);
   const createNote = useVaultStore((s) => s.createNote);
   const vaultPath = useSettingsStore((s) => s.vaultPath);
+  const t = useSettingsStore((s) => s.t);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   if (tabs.length === 0) return null;
@@ -116,15 +117,15 @@ const TabBar = () => {
                 </div>
               </ContextMenuTrigger>
               <ContextMenuContent>
-                <ContextMenuItem onClick={() => void closeTab(path)}>关闭</ContextMenuItem>
-                <ContextMenuItem onClick={() => void closeOthers(path)}>关闭其他</ContextMenuItem>
-                <ContextMenuItem onClick={() => void closeToRight(path)}>关闭右侧</ContextMenuItem>
+                <ContextMenuItem onClick={() => void closeTab(path)}>{t.tabClose}</ContextMenuItem>
+                <ContextMenuItem onClick={() => void closeOthers(path)}>{t.tabCloseOthers}</ContextMenuItem>
+                <ContextMenuItem onClick={() => void closeToRight(path)}>{t.tabCloseToRight}</ContextMenuItem>
                 <ContextMenuSeparator />
                 <ContextMenuItem
                   disabled={!cmd("tab.reopen")?.when?.()}
                   onClick={() => void cmd("tab.reopen")?.run()}
                 >
-                  恢复关闭的标签
+                  {t.tabReopen}
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>

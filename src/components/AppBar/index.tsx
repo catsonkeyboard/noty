@@ -1,6 +1,7 @@
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { version } from "../../../package.json";
 import { useUiStore } from "@/store/UiStore";
+import { useSettingsStore } from "@/store/SettingsStore";
 import { buildCommands, titleWithShortcut } from "@/lib/commands";
 import {
   MinusIcon,
@@ -18,6 +19,7 @@ const cmd = (id: string) => buildCommands().find((c) => c.id === id)!;
 
 const AppBar = () => {
   const { focusMode, setSettingsOpen } = useUiStore();
+  const t = useSettingsStore((s) => s.t);
 
   const toggleMaximize = async () => {
     if (await appWindow.isMaximized()) appWindow.unmaximize();
@@ -58,21 +60,21 @@ const AppBar = () => {
           <button
             className="grid place-items-center w-11 h-full hover:bg-accent/10 hover:text-foreground"
             onClick={() => appWindow.minimize()}
-            title="最小化"
+            title={t.minimize}
           >
             <MinusIcon size={16} />
           </button>
           <button
             className="grid place-items-center w-11 h-full hover:bg-accent/10 hover:text-foreground"
             onClick={toggleMaximize}
-            title="最大化 / 还原"
+            title={t.maximize}
           >
             <SquareIcon size={13} />
           </button>
           <button
             className="grid place-items-center w-11 h-full hover:bg-destructive hover:text-destructive-foreground"
             onClick={() => appWindow.close()}
-            title="关闭"
+            title={t.close}
           >
             <XIcon size={16} />
           </button>

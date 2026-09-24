@@ -18,22 +18,23 @@ type Item =
 const flattenFiles = (nodes: TreeNode[]): string[] =>
   nodes.flatMap((n) => (n.is_dir ? flattenFiles(n.children) : [n.path]));
 
-const GROUP_LABELS: Record<string, string> = {
-  file: "文件",
-  view: "视图",
-  tab: "标签",
-  ai: "AI",
-  app: "应用",
-};
-
 const CommandPalette = () => {
   const open = useUiStore((s) => s.paletteOpen);
   const setOpen = useUiStore((s) => s.setPaletteOpen);
   const tree = useVaultStore((s) => s.tree);
   const vaultPath = useSettingsStore((s) => s.vaultPath);
+  const t = useSettingsStore((s) => s.t);
   const recentPaths = useEditorStore((s) => s.recentPaths);
   const openNote = useEditorStore((s) => s.openNote);
   const showToast = useUiStore((s) => s.showToast);
+
+  const groupLabels: Record<string, string> = {
+    file: t.groupFile,
+    view: t.groupView,
+    tab: t.groupTab,
+    ai: t.groupAi,
+    app: t.groupApp,
+  };
 
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
@@ -65,7 +66,7 @@ const CommandPalette = () => {
         kind: "file",
         path,
         label: path.split("/").pop()?.replace(/\.md$/, "") ?? path,
-        hint: "最近打开",
+        hint: t.paletteRecentOpened,
       }));
       return [...recent, ...commands];
     }
@@ -93,7 +94,7 @@ const CommandPalette = () => {
       }
     }
     return scored.sort((a, b) => b.score - a.score).slice(0, 30).map((s) => s.item);
-  }, [query, files, recentPaths, vaultPath]);
+  }, [query, files, recentPaths, vaultPath, t]);
 
   useEffect(() => setSelected(0), [query]);
 
@@ -116,7 +117,7 @@ const CommandPalette = () => {
       await item.cmd.run();
     } catch (e) {
       console.error(`command ${item.cmd.id} failed:`, e);
-      showToast(`命令执行失败：${item.cmd.title}`);
+      showToast(t.commandFailedToast.replace("{title}", item.cmd.title));
     }
   };
 
@@ -136,7 +137,7 @@ const CommandPalette = () => {
           <input
             ref={inputRef}
             className="h-11 w-full bg-transparent text-sm outline-none"
-            placeholder="输入命令或文件名…"
+            placeholder={t.palettePlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -180,7 +181,7 @@ const CommandPalette = () => {
                     {titleWithShortcut(item.cmd)}
                   </span>
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    {GROUP_LABELS[item.cmd.group]}
+                    {groupLabels[item.cmd.group]}
                   </span>
                 </>
               ) : (
@@ -195,7 +196,7 @@ const CommandPalette = () => {
           ))}
           {query.trim() && items.length === 0 && (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-              没有匹配的命令或文件
+              {t.paletteNoMatches}
             </p>
           )}
         </div>

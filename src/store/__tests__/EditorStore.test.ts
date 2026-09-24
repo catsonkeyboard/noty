@@ -76,4 +76,16 @@ describe("EditorStore tab operations", () => {
     useEditorStore.getState().reorderTab(1, 0);
     expect(useEditorStore.getState().tabs).toEqual(["/v/b.md", "/v/a.md"]);
   });
+
+  it("closeAll flushes pending edits before clearing tabs", async () => {
+    const saved: string[] = [];
+    await useEditorStore.getState().openNote("/v/a.md", { newTab: true });
+    useEditorStore.getState().setPendingFlush(async () => {
+      saved.push("flushed");
+    });
+    await useEditorStore.getState().closeAll();
+    expect(saved).toEqual(["flushed"]);
+    expect(useEditorStore.getState().tabs).toEqual([]);
+    expect(useEditorStore.getState().activePath).toBeNull();
+  });
 });

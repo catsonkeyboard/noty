@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { SparklesIcon, XIcon } from "lucide-react";
 import { useUiStore } from "@/store/UiStore";
 import { useEditorStore } from "@/store/EditorStore";
+import { useSettingsStore } from "@/store/SettingsStore";
 import { useLlmStore, type ChatMessage } from "@/store/LlmStore";
 import { secretsApi } from "@/lib/tauri";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ const AiPanel = () => {
   const setAiPanel = useUiStore((s) => s.setAiPanel);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const editor = useEditorStore((s) => s.editor);
+  const t = useSettingsStore((s) => s.t);
   const { status, output, error, start, cancel, reset } = useLlmStore();
 
   const [prompt, setPrompt] = useState("");
@@ -90,7 +92,7 @@ const AiPanel = () => {
         <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
           <span className="flex items-center gap-2 text-sm font-semibold">
             <SparklesIcon size={15} className="text-muted-foreground" />
-            {mode === "ask" ? "Ask AI" : "Summarize note"}
+            {mode === "ask" ? t.askAi : t.summarizeNote}
           </span>
           <button
             className="grid h-6 w-6 place-items-center rounded hover:bg-accent"
@@ -102,7 +104,7 @@ const AiPanel = () => {
 
         {keyMissing ? (
           <div className="flex flex-col items-center gap-3 p-6 text-sm text-muted-foreground">
-            <p>No API key configured yet.</p>
+            <p>{t.aiNoKeyTitle}</p>
             <Button
               size="sm"
               onClick={() => {
@@ -110,7 +112,7 @@ const AiPanel = () => {
                 setSettingsOpen(true);
               }}
             >
-              Open Settings
+              {t.aiOpenSettings}
             </Button>
           </div>
         ) : (
@@ -121,7 +123,7 @@ const AiPanel = () => {
                   autoFocus
                   rows={3}
                   className="w-full resize-none rounded-md bg-muted/50 p-2 text-sm outline-none"
-                  placeholder="What should the AI write? (Enter to send, Shift+Enter for newline)"
+                  placeholder={t.aiPromptPlaceholder}
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyDown={(e) => {
@@ -148,17 +150,17 @@ const AiPanel = () => {
             <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">
               {status === "streaming" && (
                 <Button variant="secondary" size="sm" onClick={cancel}>
-                  Stop
+                  {t.aiStop}
                 </Button>
               )}
               {mode === "ask" && status !== "streaming" && (
                 <Button size="sm" onClick={submit} disabled={!prompt.trim()}>
-                  {output ? "Regenerate" : "Generate"}
+                  {output ? t.aiRegenerate : t.aiGenerate}
                 </Button>
               )}
               {status === "done" && output && (
                 <Button size="sm" onClick={insert} disabled={!editor}>
-                  Insert into note
+                  {t.aiInsert}
                 </Button>
               )}
             </div>

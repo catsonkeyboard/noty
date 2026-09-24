@@ -29,6 +29,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(llm::LlmState::default())
         .manage(sync::SyncGuard::default())
+        .manage(vault::search::SearchIndex::default())
         .invoke_handler(tauri::generate_handler![
             config::load_config,
             config::save_config,

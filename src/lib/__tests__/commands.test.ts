@@ -65,6 +65,6 @@ describe("command registry", () => {
 
   it("titleWithShortcut appends formatted keys", () => {
     const c = buildCommands().find((x) => x.id === "search.toggle")!;
-    expect(titleWithShortcut(c, false)).toBe("搜索笔记 (Ctrl+K)");
+    expect(titleWithShortcut(c, false)).toBe(`${c.title} (Ctrl+K)`);
   });
 });
