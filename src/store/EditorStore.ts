@@ -40,7 +40,7 @@ type EditorState = {
   closeTab: (path: string) => Promise<void>;
   reopenTab: () => Promise<void>;
   closeOthers: (path: string) => Promise<void>;
-  closeAll: () => void;
+  closeAll: () => Promise<void>;
   closeToRight: (path: string) => Promise<void>;
   reorderTab: (from: number, to: number) => void;
   /** Re-read the active note from disk (after sync downloaded a new version). No-op when dirty. */
@@ -139,7 +139,10 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       }
     },
 
-    closeAll: () =>
+    closeAll: async () => {
+      // flush unsaved edits of the active note before dropping all tabs
+      const flush = get().pendingFlush;
+      if (flush) await flush();
       set({
         tabs: [],
         closedTabs: [],
@@ -149,7 +152,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         liveBody: "",
         dirty: false,
         saveStatus: "idle",
-      }),
+      });
+    },
 
     reloadActive: async () => {
       const { activePath, dirty } = get();

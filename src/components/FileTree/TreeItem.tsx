@@ -8,6 +8,7 @@ import {
 import type { TreeNode } from "@/types/vault";
 import { useVaultStore } from "@/store/VaultStore";
 import { useEditorStore } from "@/store/EditorStore";
+import { useSettingsStore } from "@/store/SettingsStore";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -38,6 +39,7 @@ const TreeItem = ({ node, depth }: Props) => {
   const openNote = useEditorStore((s) => s.openNote);
   const handleRename = useEditorStore((s) => s.handleRename);
   const handleDelete = useEditorStore((s) => s.handleDelete);
+  const t = useSettingsStore((s) => s.t);
 
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -157,19 +159,19 @@ const TreeItem = ({ node, depth }: Props) => {
         <ContextMenuContent>
           {node.is_dir && (
             <>
-              <ContextMenuItem onClick={onNewNote}>New Note</ContextMenuItem>
+              <ContextMenuItem onClick={onNewNote}>{t.newNote}</ContextMenuItem>
               <ContextMenuItem onClick={() => createFolder(node.path, "New Folder")}>
-                New Folder
+                {t.newFolder}
               </ContextMenuItem>
               <ContextMenuSeparator />
             </>
           )}
-          <ContextMenuItem onClick={() => setEditing(true)}>Rename</ContextMenuItem>
+          <ContextMenuItem onClick={() => setEditing(true)}>{t.rename}</ContextMenuItem>
           <ContextMenuItem
             className="text-destructive"
             onClick={() => setConfirmDelete(true)}
           >
-            Delete
+            {t.delete}
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
@@ -182,15 +184,15 @@ const TreeItem = ({ node, depth }: Props) => {
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent style={{ maxWidth: 450 }}>
-          <AlertDialogTitle>Delete {displayName}?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t.deleteConfirmTitle.replace("{name}", displayName)}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            {node.is_dir
-              ? "This will permanently delete the folder and everything inside it."
-              : "This will permanently delete the note from disk."}
+            {node.is_dir ? t.deleteFolderConfirmDesc : t.deleteNoteConfirmDesc}
           </AlertDialogDescription>
           <div className="mt-4 flex justify-end gap-3">
             <AlertDialogCancel asChild>
-              <Button variant="secondary">Cancel</Button>
+              <Button variant="secondary">{t.cancel}</Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
               <Button
@@ -200,7 +202,7 @@ const TreeItem = ({ node, depth }: Props) => {
                   handleDelete(node.path);
                 }}
               >
-                Delete
+                {t.delete}
               </Button>
             </AlertDialogAction>
           </div>

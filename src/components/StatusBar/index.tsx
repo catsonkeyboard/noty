@@ -64,6 +64,7 @@ const SyncIndicator = () => {
 const StatusBar = () => {
   const vaultPath = useSettingsStore((s) => s.vaultPath);
   const setVaultPath = useSettingsStore((s) => s.setVaultPath);
+  const t = useSettingsStore((s) => s.t);
   const activePath = useEditorStore((s) => s.activePath);
   const liveBody = useEditorStore((s) => s.liveBody);
   const frontmatter = useEditorStore((s) => s.frontmatter);
@@ -102,7 +103,7 @@ const StatusBar = () => {
       </div>
       {activePath && (
         <div className="flex items-center gap-4">
-          <span>{countWords(liveBody)} words</span>
+          <span>{t.wordsCount.replace("{count}", String(countWords(liveBody)))}</span>
           {frontmatter?.updated && (
             <span title={`Created ${dayjs(frontmatter.created).format("YYYY-MM-DD HH:mm")}`}>
               {dayjs(frontmatter.updated).format("YYYY-MM-DD HH:mm")}

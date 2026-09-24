@@ -11,6 +11,7 @@ import Image from "@tiptap/extension-image";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 import { useEditorStore } from "@/store/EditorStore";
+import { useSettingsStore } from "@/store/SettingsStore";
 import { cn } from "@/lib/utils";
 import { SlashCommand } from "./SlashCommand";
 
@@ -37,6 +38,7 @@ const NoteEditor = ({ body, loadCounter, wide, onChangeMarkdown }: Props) => {
   onChangeRef.current = onChangeMarkdown;
   const bodyRef = useRef(body);
   bodyRef.current = body;
+  const t = useSettingsStore((s) => s.t);
 
   const editor = useEditor({
     extensions: [
@@ -107,11 +109,11 @@ const NoteEditor = ({ body, loadCounter, wide, onChangeMarkdown }: Props) => {
           >
             {(
               [
-                ["B", () => editor.chain().focus().toggleBold().run(), editor.isActive("bold"), "加粗"],
-                ["I", () => editor.chain().focus().toggleItalic().run(), editor.isActive("italic"), "斜体"],
-                ["S", () => editor.chain().focus().toggleStrike().run(), editor.isActive("strike"), "删除线"],
-                ["</>", () => editor.chain().focus().toggleCode().run(), editor.isActive("code"), "行内代码"],
-                ["H2", () => editor.chain().focus().toggleHeading({ level: 2 }).run(), editor.isActive("heading", { level: 2 }), "标题"],
+                ["B", () => editor.chain().focus().toggleBold().run(), editor.isActive("bold"), t.bold],
+                ["I", () => editor.chain().focus().toggleItalic().run(), editor.isActive("italic"), t.italic],
+                ["S", () => editor.chain().focus().toggleStrike().run(), editor.isActive("strike"), t.strikeThrough],
+                ["</>", () => editor.chain().focus().toggleCode().run(), editor.isActive("code"), t.inlineCode],
+                ["H2", () => editor.chain().focus().toggleHeading({ level: 2 }).run(), editor.isActive("heading", { level: 2 }), t.heading],
               ] as const
             ).map(([label, run, active, title]) => (
               <button

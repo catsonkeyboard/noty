@@ -1,8 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  FileCode2Icon,
   FilePlusIcon,
   FolderPlusIcon,
-  FileCode2Icon,
   InfoIcon,
   ListTreeIcon,
   PanelLeftIcon,
@@ -11,18 +11,16 @@ import {
   SparklesIcon,
   SquareIcon,
 } from "lucide-react";
-import { formatShortcut, isEditorFocused } from "@/lib/hotkeys";
+import { formatShortcut } from "./hotkeys";
 import { useUiStore } from "@/store/UiStore";
-import { useEditorStore } from "@/store/EditorStore";
 import { useVaultStore } from "@/store/VaultStore";
+import { useEditorStore } from "@/store/EditorStore";
 import { useSettingsStore } from "@/store/SettingsStore";
 
 export type CommandGroup = "file" | "view" | "tab" | "ai" | "app";
 
-export type ShortcutBinding = {
-  /** canonical combo, e.g. "mod+shift+t" */
+export type Shortcut = {
   combo: string;
-  /** extra gate for this combo only (e.g. ⌘B off inside the editor) */
   when?: () => boolean;
 };
 
@@ -31,38 +29,40 @@ export type Command = {
   title: string;
   group: CommandGroup;
   icon?: LucideIcon;
-  /** triggering combos; [0] is displayed in palette/tooltips */
-  shortcuts?: ShortcutBinding[];
-  /** gates ALL shortcuts and palette execution */
+  shortcuts?: Shortcut[];
   when?: () => boolean;
   run: () => void | Promise<void>;
 };
 
-export function titleWithShortcut(cmd: Command, isMac?: boolean): string {
-  const combo = cmd.shortcuts?.[0]?.combo;
-  return combo ? `${cmd.title} (${formatShortcut(combo, isMac)})` : cmd.title;
-}
-
 const ui = () => useUiStore.getState();
+const vault = () => useVaultStore.getState();
 const ed = () => useEditorStore.getState();
-const vaultPath = () => useSettingsStore.getState().vaultPath;
+const settings = () => useSettingsStore.getState();
+
+const vaultPath = () => settings().vaultPath;
+const t = () => settings().t;
 
 const newNote = async () => {
   const v = vaultPath();
   if (!v) return;
-  const path = await useVaultStore.getState().createNote(v, "Untitled");
-  if (path) ed().openNote(path, { newTab: true });
+  const path = await vault().createNote(v, "Untitled");
+  if (path) ed().openNote(path);
 };
 
 const newFolder = async () => {
   const v = vaultPath();
-  if (v) await useVaultStore.getState().createFolder(v, "New Folder");
+  if (!v) return;
+  await vault().createFolder(v, "New Folder");
 };
 
-const toggleSource = async () => {
-  const flush = ed().pendingFlush;
-  if (flush) await flush();
-  ui().setViewMode(ui().viewMode === "rich" ? "source" : "rich");
+const isEditorFocused = () => {
+  const el = document.activeElement;
+  return !!el && el.closest(".tiptap") !== null;
+};
+
+const toggleSource = () => {
+  const mode = ui().viewMode === "rich" ? "source" : "rich";
+  ui().setViewMode(mode);
 };
 
 const activateTab = (i: number) => {
@@ -80,10 +80,11 @@ const cycleTab = (delta: number) => {
 export function buildCommands(): Command[] {
   const hasTabs = () => ed().tabs.length > 0;
   const hasNote = () => !!ed().activePath;
+  const tr = t();
 
   const activateCommands: Command[] = Array.from({ length: 9 }, (_, i) => ({
     id: `tab.activate-${i + 1}`,
-    title: `切换到标签 ${i + 1}`,
+    title: tr.switchToTab.replace("{num}", String(i + 1)),
     group: "tab" as const,
     shortcuts: [{ combo: `mod+${i + 1}` }],
     when: () => i < ed().tabs.length,
@@ -93,7 +94,7 @@ export function buildCommands(): Command[] {
   return [
     {
       id: "file.new-note",
-      title: "新建笔记",
+      title: tr.cmdNewNote,
       group: "file",
       icon: FilePlusIcon,
       shortcuts: [{ combo: "mod+n" }],
@@ -102,7 +103,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "file.new-folder",
-      title: "新建文件夹",
+      title: tr.cmdNewFolder,
       group: "file",
       icon: FolderPlusIcon,
       shortcuts: [{ combo: "mod+shift+n" }],
@@ -111,7 +112,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "file.save",
-      title: "立即保存",
+      title: tr.cmdSave,
       group: "file",
       shortcuts: [{ combo: "mod+s" }],
       when: hasNote,
@@ -122,7 +123,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "search.toggle",
-      title: "搜索笔记",
+      title: tr.cmdSearch,
       group: "file",
       icon: SearchIcon,
       shortcuts: [{ combo: "mod+k" }],
@@ -134,7 +135,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "palette.toggle",
-      title: "命令面板",
+      title: tr.cmdPalette,
       group: "app",
       icon: SquareIcon,
       shortcuts: [{ combo: "mod+p" }],
@@ -146,7 +147,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "view.sidebar",
-      title: "切换侧栏",
+      title: tr.cmdToggleSidebar,
       group: "view",
       icon: PanelLeftIcon,
       shortcuts: [
@@ -157,7 +158,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "view.outline",
-      title: "大纲面板",
+      title: tr.cmdOutline,
       group: "view",
       icon: ListTreeIcon,
       shortcuts: [{ combo: "mod+\\" }],
@@ -166,7 +167,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "view.properties",
-      title: "属性面板",
+      title: tr.cmdProperties,
       group: "view",
       icon: InfoIcon,
       shortcuts: [{ combo: "mod+shift+\\" }],
@@ -175,7 +176,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "view.source-toggle",
-      title: "切换源码模式",
+      title: tr.cmdToggleSource,
       group: "view",
       icon: FileCode2Icon,
       shortcuts: [{ combo: "mod+e" }],
@@ -184,7 +185,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "ai.ask",
-      title: "Ask AI",
+      title: tr.cmdAskAi,
       group: "ai",
       icon: SparklesIcon,
       shortcuts: [{ combo: "mod+shift+f" }],
@@ -193,7 +194,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "tab.close",
-      title: "关闭标签",
+      title: tr.cmdCloseTab,
       group: "tab",
       shortcuts: [{ combo: "mod+w" }],
       when: hasTabs,
@@ -204,7 +205,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "tab.close-all",
-      title: "关闭全部标签",
+      title: tr.cmdCloseAllTabs,
       group: "tab",
       shortcuts: [{ combo: "mod+shift+w" }],
       when: hasTabs,
@@ -212,7 +213,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "tab.reopen",
-      title: "恢复关闭的标签",
+      title: tr.cmdReopenTab,
       group: "tab",
       shortcuts: [{ combo: "mod+shift+t" }],
       when: () => ed().closedTabs.length > 0,
@@ -220,7 +221,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "tab.next",
-      title: "下一个标签",
+      title: tr.cmdNextTab,
       group: "tab",
       shortcuts: [{ combo: "alt+mod+arrowright" }],
       when: () => ed().tabs.length > 1,
@@ -228,7 +229,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "tab.prev",
-      title: "上一个标签",
+      title: tr.cmdPrevTab,
       group: "tab",
       shortcuts: [{ combo: "alt+mod+arrowleft" }],
       when: () => ed().tabs.length > 1,
@@ -236,7 +237,7 @@ export function buildCommands(): Command[] {
     },
     {
       id: "app.settings",
-      title: "打开设置",
+      title: tr.cmdOpenSettings,
       group: "app",
       icon: SettingsIcon,
       shortcuts: [{ combo: "mod+," }],
@@ -244,4 +245,10 @@ export function buildCommands(): Command[] {
     },
     ...activateCommands,
   ];
+}
+
+export function titleWithShortcut(cmd: Command, isMac?: boolean): string {
+  const sc = cmd.shortcuts?.[0];
+  if (!sc) return cmd.title;
+  return `${cmd.title} (${formatShortcut(sc.combo, isMac)})`;
 }

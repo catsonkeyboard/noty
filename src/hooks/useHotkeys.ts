@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { buildCommands } from "@/lib/commands";
 import { eventMatches } from "@/lib/hotkeys";
 import { useUiStore } from "@/store/UiStore";
+import { useSettingsStore } from "@/store/SettingsStore";
 
 /**
  * Single global hotkey listener (window capture phase — runs before
@@ -13,6 +14,7 @@ export function useHotkeys() {
   useEffect(() => {
     const onKey = async (e: KeyboardEvent) => {
       const ui = useUiStore.getState();
+      const t = useSettingsStore.getState().t;
       const overlayOpen =
         ui.searchOpen || ui.paletteOpen || ui.settingsOpen || ui.aiPanel !== null;
       const isToggle = eventMatches(e, "mod+k") || eventMatches(e, "mod+p");
@@ -29,7 +31,7 @@ export function useHotkeys() {
             await cmd.run();
           } catch (err) {
             console.error(`command ${cmd.id} failed:`, err);
-            ui.showToast(`命令执行失败：${cmd.title}`);
+            ui.showToast(t.commandFailedToast.replace("{title}", cmd.title));
           }
           return;
         }

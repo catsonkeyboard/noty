@@ -28,6 +28,7 @@ const SearchBar = () => {
   const open = useUiStore((s) => s.searchOpen);
   const setOpen = useUiStore((s) => s.setSearchOpen);
   const vaultPath = useSettingsStore((s) => s.vaultPath);
+  const t = useSettingsStore((s) => s.t);
   const openNote = useEditorStore((s) => s.openNote);
 
   const [query, setQuery] = useState("");
@@ -89,7 +90,7 @@ const SearchBar = () => {
           <input
             ref={inputRef}
             className="h-11 w-full bg-transparent text-sm outline-none"
-            placeholder="Search notes…"
+            placeholder={t.searchPlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -128,7 +129,7 @@ const SearchBar = () => {
           ))}
           {query.trim() && hits.length === 0 && (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-              No results for “{query}”
+              {t.searchNoResults.replace("{query}", query)}
             </p>
           )}
         </div>

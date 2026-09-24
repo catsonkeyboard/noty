@@ -11,6 +11,7 @@ use tauri::Manager;
 pub struct AppConfig {
     pub vault_path: Option<String>,
     pub theme: Option<String>,
+    pub language: Option<String>,
     pub editor_width: Option<String>,
     pub llm: LlmConfig,
     pub webdav: WebdavConfig,
@@ -77,6 +78,7 @@ mod tests {
         let config = AppConfig {
             vault_path: Some("/tmp/vault".into()),
             theme: Some("dark".into()),
+            language: Some("zh-CN".into()),
             editor_width: Some("wide".into()),
             llm: LlmConfig {
                 base_url: Some("http://localhost:11434/v1".into()),

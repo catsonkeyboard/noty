@@ -8,6 +8,7 @@ import { useEditorStore } from "@/store/EditorStore";
 import { secretsApi, syncApi } from "@/lib/tauri";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { Language } from "@/lib/i18n";
 
 type Tab = "general" | "ai" | "sync";
 
@@ -17,6 +18,7 @@ const SettingsDialog = () => {
   const {
     vaultPath,
     theme,
+    language,
     llmBaseUrl,
     llmModel,
     webdavUrl,
@@ -24,8 +26,10 @@ const SettingsDialog = () => {
     webdavRemoteDir,
     webdavSyncOnStart,
     webdavAutoSyncIntervalMins,
+    t,
     setVaultPath,
     setTheme,
+    setLanguage,
     setLlmBaseUrl,
     setLlmModel,
     setWebdav,
@@ -130,7 +134,7 @@ const SettingsDialog = () => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-          <span className="text-sm font-semibold">Settings</span>
+          <span className="text-sm font-semibold">{t.settingsTitle}</span>
           <button
             className="grid h-6 w-6 place-items-center rounded hover:bg-accent"
             onClick={() => setOpen(false)}
@@ -140,18 +144,18 @@ const SettingsDialog = () => {
         </div>
 
         <div className="flex gap-1 border-b border-border px-3 pt-2">
-          {(["general", "ai", "sync"] as Tab[]).map((t) => (
+          {(["general", "ai", "sync"] as Tab[]).map((tabKey) => (
             <button
-              key={t}
+              key={tabKey}
               className={cn(
                 "rounded-t-md px-3 py-1.5 text-sm capitalize",
-                tab === t
+                tab === tabKey
                   ? "border border-b-0 border-border bg-popover font-medium"
                   : "text-muted-foreground hover:text-foreground"
               )}
-              onClick={() => setTab(t)}
+              onClick={() => setTab(tabKey)}
             >
-              {t === "general" ? "General" : t === "ai" ? "AI" : "Sync"}
+              {tabKey === "general" ? t.tabGeneral : tabKey === "ai" ? t.tabAi : t.tabSync}
             </button>
           ))}
         </div>
@@ -160,29 +164,44 @@ const SettingsDialog = () => {
           {tab === "general" && (
             <>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Vault folder</label>
+                <label className="text-sm font-medium">{t.vaultFolder}</label>
                 <div className="flex items-center gap-2">
                   <span className="min-w-0 flex-1 truncate rounded-md bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
                     {vaultPath}
                   </span>
                   <Button variant="outline" size="sm" onClick={changeVault}>
                     <FolderOpenIcon size={14} className="mr-1.5" />
-                    Change…
+                    {t.changeFolder}
                   </Button>
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Theme</label>
+                <label className="text-sm font-medium">{t.themeLabel}</label>
                 <div className="flex gap-2">
-                  {(["light", "dark", "system"] as Theme[]).map((t) => (
+                  {(["light", "dark", "system"] as Theme[]).map((th) => (
                     <Button
-                      key={t}
-                      variant={theme === t ? "default" : "outline"}
+                      key={th}
+                      variant={theme === th ? "default" : "outline"}
                       size="sm"
                       className="capitalize"
-                      onClick={() => setTheme(t)}
+                      onClick={() => setTheme(th)}
                     >
-                      {t}
+                      {th === "light" ? t.themeLight : th === "dark" ? t.themeDark : t.themeSystem}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium">{t.languageLabel}</label>
+                <div className="flex gap-2">
+                  {(["en", "zh-CN"] as Language[]).map((lang) => (
+                    <Button
+                      key={lang}
+                      variant={language === lang ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setLanguage(lang)}
+                    >
+                      {lang === "en" ? t.langEn : t.langZhCN}
                     </Button>
                   ))}
                 </div>
@@ -193,7 +212,7 @@ const SettingsDialog = () => {
           {tab === "ai" && (
             <>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Base URL</label>
+                <label className="text-sm font-medium">{t.baseUrl}</label>
                 <input
                   className={inputCls}
                   value={llmBaseUrl}
@@ -202,11 +221,11 @@ const SettingsDialog = () => {
                   spellCheck={false}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Any OpenAI-compatible endpoint works (OpenAI, DeepSeek, Ollama…).
+                  {t.baseUrlHint}
                 </p>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Model</label>
+                <label className="text-sm font-medium">{t.model}</label>
                 <div className="flex items-center gap-2">
                   <input
                     className={inputCls}
@@ -236,14 +255,14 @@ const SettingsDialog = () => {
                 </datalist>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">API key</label>
+                <label className="text-sm font-medium">{t.apiKey}</label>
                 {keySet ? (
                   <div className="flex items-center gap-2 text-sm">
                     <span className="flex items-center gap-1 text-green-600 dark:text-green-500">
-                      <CheckIcon size={14} /> Key is set (stored in system keychain)
+                      <CheckIcon size={14} /> {t.keySetNotice}
                     </span>
                     <Button variant="outline" size="sm" onClick={removeKey}>
-                      Remove
+                      {t.remove}
                     </Button>
                   </div>
                 ) : (
@@ -257,7 +276,7 @@ const SettingsDialog = () => {
                       onKeyDown={(e) => e.key === "Enter" && saveKey()}
                     />
                     <Button size="sm" onClick={saveKey} disabled={!keyInput.trim()}>
-                      Save
+                      {t.save}
                     </Button>
                   </div>
                 )}
@@ -268,7 +287,7 @@ const SettingsDialog = () => {
           {tab === "sync" && (
             <>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Server URL</label>
+                <label className="text-sm font-medium">{t.serverUrl}</label>
                 <input
                   className={inputCls}
                   value={webdavUrl}
@@ -279,7 +298,7 @@ const SettingsDialog = () => {
               </div>
               <div className="flex gap-3">
                 <div className="flex flex-1 flex-col gap-1.5">
-                  <label className="text-sm font-medium">Username</label>
+                  <label className="text-sm font-medium">{t.username}</label>
                   <input
                     className={inputCls}
                     value={webdavUsername}
@@ -289,7 +308,7 @@ const SettingsDialog = () => {
                   />
                 </div>
                 <div className="flex flex-1 flex-col gap-1.5">
-                  <label className="text-sm font-medium">Remote folder</label>
+                  <label className="text-sm font-medium">{t.remoteFolder}</label>
                   <input
                     className={inputCls}
                     value={webdavRemoteDir}
@@ -300,14 +319,14 @@ const SettingsDialog = () => {
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Password</label>
+                <label className="text-sm font-medium">{t.password}</label>
                 {davKeySet ? (
                   <div className="flex items-center gap-2 text-sm">
                     <span className="flex items-center gap-1 text-green-600 dark:text-green-500">
-                      <CheckIcon size={14} /> Password is set (stored in system keychain)
+                      <CheckIcon size={14} /> {t.davKeySetNotice}
                     </span>
                     <Button variant="outline" size="sm" onClick={removeDavKey}>
-                      Remove
+                      {t.remove}
                     </Button>
                   </div>
                 ) : (
@@ -321,12 +340,12 @@ const SettingsDialog = () => {
                       onKeyDown={(e) => e.key === "Enter" && saveDavKey()}
                     />
                     <Button size="sm" onClick={saveDavKey} disabled={!davKeyInput.trim()}>
-                      Save
+                      {t.save}
                     </Button>
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  For Jianguoyun (坚果云) use an app password from 账户信息 → 安全选项.
+                  {t.davJianguoyunHint}
                 </p>
               </div>
               <div className="flex items-center gap-4">
@@ -336,10 +355,10 @@ const SettingsDialog = () => {
                     checked={webdavSyncOnStart}
                     onChange={(e) => setWebdav({ webdavSyncOnStart: e.target.checked })}
                   />
-                  Sync on startup
+                  {t.syncOnStartup}
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  Auto sync every
+                  {t.autoSyncEvery}
                   <input
                     className={cn(inputCls, "w-16 text-center")}
                     type="number"
@@ -351,7 +370,7 @@ const SettingsDialog = () => {
                       })
                     }
                   />
-                  min (0 = off)
+                  {t.autoSyncMinUnit}
                 </label>
               </div>
               <div className="flex items-center gap-3">
@@ -361,11 +380,11 @@ const SettingsDialog = () => {
                   onClick={testConnection}
                   disabled={testState.kind === "testing" || !webdavUrl.trim()}
                 >
-                  {testState.kind === "testing" ? "Testing…" : "Test connection"}
+                  {testState.kind === "testing" ? t.testing : t.testConnection}
                 </Button>
                 {testState.kind === "ok" && (
                   <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-500">
-                    <CheckIcon size={14} /> Connected
+                    <CheckIcon size={14} /> {t.connected}
                   </span>
                 )}
                 {testState.kind === "fail" && (

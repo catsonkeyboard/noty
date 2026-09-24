@@ -52,10 +52,11 @@ const useHeadings = (): Heading[] => {
 
 const Outline = () => {
   const editor = useEditorStore((s) => s.editor);
+  const t = useSettingsStore((s) => s.t);
   const headings = useHeadings();
 
   if (headings.length === 0) {
-    return <p className="p-4 text-xs text-muted-foreground">No headings in this note.</p>;
+    return <p className="p-4 text-xs text-muted-foreground">{t.noHeadings}</p>;
   }
 
   return (
@@ -91,6 +92,7 @@ const Properties = () => {
   const activePath = useEditorStore((s) => s.activePath);
   const liveBody = useEditorStore((s) => s.liveBody);
   const vaultPath = useSettingsStore((s) => s.vaultPath);
+  const t = useSettingsStore((s) => s.t);
 
   if (!frontmatter || !activePath) return null;
 
@@ -102,17 +104,17 @@ const Properties = () => {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <Row label="Path" value={relative} />
-      <Row label="Created" value={fmt(frontmatter.created)} />
-      <Row label="Updated" value={fmt(frontmatter.updated)} />
+      <Row label={t.propPath} value={relative} />
+      <Row label={t.propCreated} value={fmt(frontmatter.created)} />
+      <Row label={t.propUpdated} value={fmt(frontmatter.updated)} />
       <Row
-        label="Tags"
+        label={t.propTags}
         value={
           frontmatter.tags.length > 0 ? (
             <span className="flex flex-wrap gap-1">
-              {frontmatter.tags.map((t) => (
-                <span key={t} className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                  {t}
+              {frontmatter.tags.map((tag) => (
+                <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                  {tag}
                 </span>
               ))}
             </span>
@@ -121,8 +123,8 @@ const Properties = () => {
           )
         }
       />
-      <Row label="Words" value={countWords(liveBody)} />
-      <Row label="ID" value={<span className="text-xs">{frontmatter.id}</span>} />
+      <Row label={t.propWords} value={countWords(liveBody)} />
+      <Row label={t.propId} value={<span className="text-xs">{frontmatter.id}</span>} />
     </div>
   );
 };
@@ -130,6 +132,7 @@ const Properties = () => {
 const RightPanel = () => {
   const rightPanel = useUiStore((s) => s.rightPanel);
   const activePath = useEditorStore((s) => s.activePath);
+  const t = useSettingsStore((s) => s.t);
 
   if (!rightPanel || !activePath) return null;
 
@@ -138,7 +141,7 @@ const RightPanel = () => {
       className={cn("h-full w-60 shrink-0 border-l border-border", "flex flex-col")}
     >
       <div className="border-b border-border px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {rightPanel === "outline" ? "Outline" : "Properties"}
+        {rightPanel === "outline" ? t.outlineTitle : t.propertiesTitle}
       </div>
       <ScrollArea className="min-h-0 flex-1">
         {rightPanel === "outline" ? <Outline /> : <Properties />}
