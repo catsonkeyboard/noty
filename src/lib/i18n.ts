@@ -128,7 +128,12 @@ export const en = {
   apiKey: "API key",
   keySetNotice: "Key is set (stored in system keychain)",
   remove: "Remove",
+  change: "Change",
   save: "Save",
+  saveSettings: "Save settings",
+  saveSuccess: "Saved",
+  savedToast: "Settings saved successfully",
+  saving: "Saving…",
 
   // WebDAV Settings
   serverUrl: "Server URL",
@@ -266,7 +271,12 @@ export const zhCN: Translations = {
   apiKey: "API Key",
   keySetNotice: "已配置密钥（已安全保存在系统钥匙串）",
   remove: "移除",
+  change: "更改",
   save: "保存",
+  saveSettings: "保存设置",
+  saveSuccess: "已保存",
+  savedToast: "设置已保存",
+  saving: "保存中…",
 
   serverUrl: "服务器地址",
   username: "用户名",

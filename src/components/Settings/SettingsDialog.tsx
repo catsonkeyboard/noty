@@ -37,11 +37,20 @@ const SettingsDialog = () => {
 
   const [tab, setTab] = useState<Tab>("general");
   const [keySet, setKeySet] = useState(false);
+  const [editingKey, setEditingKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
+  const [savingKey, setSavingKey] = useState(false);
+  const [savingAi, setSavingAi] = useState(false);
+  const [aiSaved, setAiSaved] = useState(false);
+  const [aiError, setAiError] = useState("");
+
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [davKeySet, setDavKeySet] = useState(false);
+  const [editingDavKey, setEditingDavKey] = useState(false);
   const [davKeyInput, setDavKeyInput] = useState("");
+  const [savingDavKey, setSavingDavKey] = useState(false);
+  const [davSaved, setDavSaved] = useState(false);
   const [testState, setTestState] = useState<
     { kind: "idle" } | { kind: "testing" } | { kind: "ok" } | { kind: "fail"; msg: string }
   >({ kind: "idle" });
@@ -50,8 +59,13 @@ const SettingsDialog = () => {
     if (openState) {
       setTab("general");
       setKeyInput("");
+      setEditingKey(false);
+      setAiSaved(false);
+      setAiError("");
       secretsApi.hasApiKey().then(setKeySet).catch(() => {});
       setDavKeyInput("");
+      setEditingDavKey(false);
+      setDavSaved(false);
       setTestState({ kind: "idle" });
       syncApi.hasWebdavPassword().then(setDavKeySet).catch(() => {});
     }
@@ -72,14 +86,53 @@ const SettingsDialog = () => {
   const saveKey = async () => {
     const key = keyInput.trim();
     if (!key) return;
-    await secretsApi.setApiKey(key);
-    setKeyInput("");
-    setKeySet(true);
+    setSavingKey(true);
+    setAiError("");
+    try {
+      await secretsApi.setApiKey(key);
+      setKeyInput("");
+      setKeySet(true);
+      setEditingKey(false);
+      setAiSaved(true);
+      setTimeout(() => setAiSaved(false), 2000);
+    } catch (e) {
+      console.error("failed to save api key:", e);
+      setAiError(String(e));
+    } finally {
+      setSavingKey(false);
+    }
   };
 
   const removeKey = async () => {
-    await secretsApi.deleteApiKey();
-    setKeySet(false);
+    try {
+      await secretsApi.deleteApiKey();
+      setKeySet(false);
+      setEditingKey(true);
+    } catch (e) {
+      console.error("failed to remove api key:", e);
+    }
+  };
+
+  const handleSaveAllAi = async () => {
+    setSavingAi(true);
+    setAiError("");
+    try {
+      await setLlmBaseUrl(llmBaseUrl);
+      await setLlmModel(llmModel);
+      if (keyInput.trim()) {
+        await secretsApi.setApiKey(keyInput.trim());
+        setKeyInput("");
+        setKeySet(true);
+        setEditingKey(false);
+      }
+      setAiSaved(true);
+      setTimeout(() => setAiSaved(false), 2500);
+    } catch (e) {
+      console.error("failed to save ai settings:", e);
+      setAiError(String(e));
+    } finally {
+      setSavingAi(false);
+    }
   };
 
   const refreshModels = async () => {
@@ -97,14 +150,29 @@ const SettingsDialog = () => {
   const saveDavKey = async () => {
     const key = davKeyInput.trim();
     if (!key) return;
-    await syncApi.setWebdavPassword(key);
-    setDavKeyInput("");
-    setDavKeySet(true);
+    setSavingDavKey(true);
+    try {
+      await syncApi.setWebdavPassword(key);
+      setDavKeyInput("");
+      setDavKeySet(true);
+      setEditingDavKey(false);
+      setDavSaved(true);
+      setTimeout(() => setDavSaved(false), 2000);
+    } catch (e) {
+      console.error("failed to save webdav password:", e);
+    } finally {
+      setSavingDavKey(false);
+    }
   };
 
   const removeDavKey = async () => {
-    await syncApi.deleteWebdavPassword();
-    setDavKeySet(false);
+    try {
+      await syncApi.deleteWebdavPassword();
+      setDavKeySet(false);
+      setEditingDavKey(true);
+    } catch (e) {
+      console.error("failed to remove webdav password:", e);
+    }
   };
 
   const testConnection = async () => {
@@ -122,7 +190,7 @@ const SettingsDialog = () => {
   };
 
   const inputCls =
-    "w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
+    "w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
 
   return (
     <div
@@ -169,7 +237,7 @@ const SettingsDialog = () => {
                   <span className="min-w-0 flex-1 truncate rounded-md bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
                     {vaultPath}
                   </span>
-                  <Button variant="outline" size="sm" onClick={changeVault}>
+                  <Button variant="outline" size="sm" className="shrink-0" onClick={changeVault}>
                     <FolderOpenIcon size={14} className="mr-1.5" />
                     {t.changeFolder}
                   </Button>
@@ -183,7 +251,7 @@ const SettingsDialog = () => {
                       key={th}
                       variant={theme === th ? "default" : "outline"}
                       size="sm"
-                      className="capitalize"
+                      className="capitalize shrink-0"
                       onClick={() => setTheme(th)}
                     >
                       {th === "light" ? t.themeLight : th === "dark" ? t.themeDark : t.themeSystem}
@@ -199,6 +267,7 @@ const SettingsDialog = () => {
                       key={lang}
                       variant={language === lang ? "default" : "outline"}
                       size="sm"
+                      className="shrink-0"
                       onClick={() => setLanguage(lang)}
                     >
                       {lang === "en" ? t.langEn : t.langZhCN}
@@ -228,7 +297,7 @@ const SettingsDialog = () => {
                 <label className="text-sm font-medium">{t.model}</label>
                 <div className="flex items-center gap-2">
                   <input
-                    className={inputCls}
+                    className={cn(inputCls, "flex-1")}
                     value={llmModel}
                     onChange={(e) => setLlmModel(e.target.value)}
                     placeholder="gpt-4o-mini"
@@ -238,6 +307,7 @@ const SettingsDialog = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="shrink-0"
                     onClick={refreshModels}
                     disabled={loadingModels}
                     title="Fetch model list from the endpoint"
@@ -256,30 +326,83 @@ const SettingsDialog = () => {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium">{t.apiKey}</label>
-                {keySet ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="flex items-center gap-1 text-green-600 dark:text-green-500">
-                      <CheckIcon size={14} /> {t.keySetNotice}
+                {keySet && !editingKey ? (
+                  <div className="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-3 py-2 text-sm">
+                    <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-500">
+                      <CheckIcon size={14} className="shrink-0" /> {t.keySetNotice}
                     </span>
-                    <Button variant="outline" size="sm" onClick={removeKey}>
-                      {t.remove}
-                    </Button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 text-xs shrink-0"
+                        onClick={() => setEditingKey(true)}
+                      >
+                        {t.change}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2.5 text-xs text-destructive hover:text-destructive shrink-0"
+                        onClick={removeKey}
+                      >
+                        {t.remove}
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <input
-                      className={inputCls}
+                      className={cn(inputCls, "flex-1")}
                       type="password"
                       value={keyInput}
                       onChange={(e) => setKeyInput(e.target.value)}
                       placeholder="sk-…"
                       onKeyDown={(e) => e.key === "Enter" && saveKey()}
                     />
-                    <Button size="sm" onClick={saveKey} disabled={!keyInput.trim()}>
-                      {t.save}
+                    <Button
+                      size="sm"
+                      className="shrink-0"
+                      onClick={saveKey}
+                      disabled={!keyInput.trim() || savingKey}
+                    >
+                      {savingKey ? t.saving : t.save}
                     </Button>
+                    {editingKey && keySet && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0 text-xs"
+                        onClick={() => {
+                          setEditingKey(false);
+                          setKeyInput("");
+                        }}
+                      >
+                        {t.cancel}
+                      </Button>
+                    )}
                   </div>
                 )}
+              </div>
+
+              {aiError && (
+                <p className="text-xs text-destructive">{aiError}</p>
+              )}
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/60">
+                {aiSaved && (
+                  <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-500 animate-in fade-in">
+                    <CheckIcon size={14} /> {t.saveSuccess}
+                  </span>
+                )}
+                <Button
+                  size="sm"
+                  className="shrink-0 px-4"
+                  onClick={handleSaveAllAi}
+                  disabled={savingAi}
+                >
+                  {savingAi ? t.saving : t.saveSettings}
+                </Button>
               </div>
             </>
           )}
@@ -320,28 +443,61 @@ const SettingsDialog = () => {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium">{t.password}</label>
-                {davKeySet ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="flex items-center gap-1 text-green-600 dark:text-green-500">
-                      <CheckIcon size={14} /> {t.davKeySetNotice}
+                {davKeySet && !editingDavKey ? (
+                  <div className="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-3 py-2 text-sm">
+                    <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-500">
+                      <CheckIcon size={14} className="shrink-0" /> {t.davKeySetNotice}
                     </span>
-                    <Button variant="outline" size="sm" onClick={removeDavKey}>
-                      {t.remove}
-                    </Button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 text-xs shrink-0"
+                        onClick={() => setEditingDavKey(true)}
+                      >
+                        {t.change}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2.5 text-xs text-destructive hover:text-destructive shrink-0"
+                        onClick={removeDavKey}
+                      >
+                        {t.remove}
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <input
-                      className={inputCls}
+                      className={cn(inputCls, "flex-1")}
                       type="password"
                       value={davKeyInput}
                       onChange={(e) => setDavKeyInput(e.target.value)}
                       placeholder="App password"
                       onKeyDown={(e) => e.key === "Enter" && saveDavKey()}
                     />
-                    <Button size="sm" onClick={saveDavKey} disabled={!davKeyInput.trim()}>
-                      {t.save}
+                    <Button
+                      size="sm"
+                      className="shrink-0"
+                      onClick={saveDavKey}
+                      disabled={!davKeyInput.trim() || savingDavKey}
+                    >
+                      {savingDavKey ? t.saving : t.save}
                     </Button>
+                    {editingDavKey && davKeySet && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0 text-xs"
+                        onClick={() => {
+                          setEditingDavKey(false);
+                          setDavKeyInput("");
+                        }}
+                      >
+                        {t.cancel}
+                      </Button>
+                    )}
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
@@ -373,23 +529,31 @@ const SettingsDialog = () => {
                   {t.autoSyncMinUnit}
                 </label>
               </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={testConnection}
-                  disabled={testState.kind === "testing" || !webdavUrl.trim()}
-                >
-                  {testState.kind === "testing" ? t.testing : t.testConnection}
-                </Button>
-                {testState.kind === "ok" && (
-                  <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-500">
-                    <CheckIcon size={14} /> {t.connected}
-                  </span>
-                )}
-                {testState.kind === "fail" && (
-                  <span className="text-sm text-red-500" title={testState.msg}>
-                    {testState.msg}
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={testConnection}
+                    disabled={testState.kind === "testing" || !webdavUrl.trim()}
+                  >
+                    {testState.kind === "testing" ? t.testing : t.testConnection}
+                  </Button>
+                  {testState.kind === "ok" && (
+                    <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-500">
+                      <CheckIcon size={14} /> {t.connected}
+                    </span>
+                  )}
+                  {testState.kind === "fail" && (
+                    <span className="text-sm text-red-500" title={testState.msg}>
+                      {testState.msg}
+                    </span>
+                  )}
+                </div>
+                {davSaved && (
+                  <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-500 animate-in fade-in">
+                    <CheckIcon size={14} /> {t.saveSuccess}
                   </span>
                 )}
               </div>
