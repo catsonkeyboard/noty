@@ -59,14 +59,19 @@ const remap = (path: string, from: string, to: string) =>
   path === from ? to : path.startsWith(from + "/") ? to + path.slice(from.length) : path;
 
 export const useEditorStore = create<EditorState>()((set, get) => {
+  let loadSequence = 0;
+
   const loadNote = async (path: string) => {
     const v = vault();
     if (!v) return;
     // persist unsaved edits of the previous note before switching
     const flush = get().pendingFlush;
     if (flush) await flush();
+
+    const seq = ++loadSequence;
     try {
       const note = await vaultApi.readNote(v, path);
+      if (seq !== loadSequence) return;
       set((s) => ({
         activePath: path,
         recentPaths: pushRecent(s.recentPaths, path),
@@ -78,8 +83,10 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         saveStatus: "idle",
       }));
     } catch (e) {
-      set({ saveStatus: "error" });
-      console.error("failed to open note:", e);
+      if (seq === loadSequence) {
+        set({ saveStatus: "error" });
+        console.error("failed to open note:", e);
+      }
     }
   };
 
@@ -168,9 +175,14 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       set({ saveStatus: "saving" });
       try {
         const updated = await vaultApi.writeNote(v, activePath, frontmatter, body);
-        // only clear dirty if the note wasn't switched while saving
+        // only clear dirty if the note wasn't switched while saving, and no new typing occurred
         if (get().activePath === activePath) {
-          set({ frontmatter: updated, body, dirty: false, saveStatus: "saved" });
+          set((s) => ({
+            frontmatter: updated,
+            body,
+            dirty: s.liveBody !== body,
+            saveStatus: "saved",
+          }));
         }
       } catch (e) {
         set({ saveStatus: "error" });
@@ -189,18 +201,25 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     },
 
     closeOthers: async (path) => {
-      const { tabs } = get();
+      const { tabs, activePath, pendingFlush } = get();
       if (!tabs.includes(path)) return;
+      if (activePath && activePath !== path && pendingFlush) {
+        await pendingFlush();
+      }
       set({ tabs: [path] });
       if (get().activePath !== path) await loadNote(path);
     },
 
     closeToRight: async (path) => {
-      const { tabs } = get();
+      const { tabs, activePath, pendingFlush } = get();
       const index = tabs.indexOf(path);
       if (index < 0) return;
-      set({ tabs: tabs.slice(0, index + 1) });
-      if (get().activePath && !get().tabs.includes(get().activePath!)) {
+      const nextTabs = tabs.slice(0, index + 1);
+      if (activePath && !nextTabs.includes(activePath) && pendingFlush) {
+        await pendingFlush();
+      }
+      set({ tabs: nextTabs });
+      if (get().activePath && !nextTabs.includes(get().activePath!)) {
         await loadNote(path);
       }
     },

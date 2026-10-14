@@ -77,12 +77,11 @@ const NoteEditor = ({ body, loadCounter, wide, onChangeMarkdown }: Props) => {
     editor.commands.focus("start", { scrollIntoView: false });
   }, [editor, loadCounter]);
 
-  // expose the instance to the AI panel and destroy it on unmount
+  // expose the instance to the store and unregister on unmount
   useEffect(() => {
     useEditorStore.getState().setEditor(editor);
     return () => {
       useEditorStore.getState().setEditor(null);
-      editor?.destroy();
     };
   }, [editor]);
 

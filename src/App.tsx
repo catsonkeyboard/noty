@@ -39,8 +39,13 @@ function App() {
       const { dirty, pendingFlush } = useEditorStore.getState();
       if (dirty && pendingFlush) {
         event.preventDefault();
-        await pendingFlush();
-        await appWindow.destroy();
+        try {
+          await pendingFlush();
+        } catch (err) {
+          console.error("failed to flush pending edits on close:", err);
+        } finally {
+          await appWindow.destroy();
+        }
       }
     });
     return () => {

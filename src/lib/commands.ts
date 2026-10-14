@@ -60,7 +60,9 @@ const isEditorFocused = () => {
   return !!el && el.closest(".tiptap") !== null;
 };
 
-const toggleSource = () => {
+const toggleSource = async () => {
+  const flush = ed().pendingFlush;
+  if (flush) await flush();
   const mode = ui().viewMode === "rich" ? "source" : "rich";
   ui().setViewMode(mode);
 };

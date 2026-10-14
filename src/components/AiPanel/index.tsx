@@ -39,7 +39,8 @@ const AiPanel = () => {
       setKeyMissing(!has);
       if (has && mode === "summarize" && !startedRef.current) {
         startedRef.current = true;
-        const note = useEditorStore.getState().editor?.getMarkdown() ?? "";
+        const edState = useEditorStore.getState();
+        const note = edState.editor?.getMarkdown() || edState.liveBody || "";
         const messages: ChatMessage[] = [
           { role: "system", content: SUMMARIZE_PROMPT },
           { role: "user", content: note },
@@ -72,11 +73,19 @@ const AiPanel = () => {
   };
 
   const insert = () => {
-    editor
-      ?.chain()
-      .focus()
-      .insertContent(output, { contentType: "markdown" })
-      .run();
+    if (editor) {
+      editor
+        .chain()
+        .focus()
+        .insertContent(output, { contentType: "markdown" })
+        .run();
+    } else {
+      const edState = useEditorStore.getState();
+      const current = edState.liveBody;
+      const next = current ? `${current}\n\n${output}` : output;
+      edState.markDirty(next);
+      edState.save(next);
+    }
     close();
   };
 
@@ -159,7 +168,7 @@ const AiPanel = () => {
                 </Button>
               )}
               {status === "done" && output && (
-                <Button size="sm" onClick={insert} disabled={!editor}>
+                <Button size="sm" onClick={insert}>
                   {t.aiInsert}
                 </Button>
               )}

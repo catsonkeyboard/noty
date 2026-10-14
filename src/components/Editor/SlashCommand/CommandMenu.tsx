@@ -22,6 +22,7 @@ const CommandMenu = forwardRef<CommandMenuHandle, Props>(({ items, command }, re
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }) => {
+      if (items.length === 0) return false;
       if (event.key === "ArrowUp") {
         setSelected((s) => (s + items.length - 1) % items.length);
         return true;

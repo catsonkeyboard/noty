@@ -75,9 +75,13 @@ pub fn parse_multistatus(xml: &str, root_path: &str) -> Result<Vec<RemoteEntry>,
                         None => decoded,
                     };
                     if let Some(rel) = path.strip_prefix(root_path) {
-                        let rel = rel.trim_end_matches('/').to_string();
-                        let hidden = rel.split('/').any(|s| s.starts_with('.'));
-                        if !rel.is_empty() && !hidden {
+                        let normalized = rel.replace('\\', "/");
+                        let rel = normalized.trim_matches('/').to_string();
+                        let segments: Vec<&str> = rel.split('/').filter(|s| !s.is_empty()).collect();
+                        let has_invalid = segments.iter().any(|s| {
+                            *s == ".." || *s == "." || s.starts_with('.') || s.contains(':')
+                        });
+                        if !rel.is_empty() && !has_invalid {
                             entries.push(RemoteEntry {
                                 rel_path: rel,
                                 etag: normalize_etag(&etag),
@@ -97,7 +101,7 @@ pub fn parse_multistatus(xml: &str, root_path: &str) -> Result<Vec<RemoteEntry>,
     Ok(entries)
 }
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 
@@ -268,6 +272,9 @@ impl WebdavClient {
             }
             Propfind::Unsupported => {
                 let mut dirs = vec![String::new()];
+                let mut visited = HashSet::new();
+                visited.insert(String::new());
+
                 while let Some(dir) = dirs.pop() {
                     let entries = match self.propfind_dir(&dir, "1").await? {
                         Propfind::Entries(e) => e,
@@ -280,7 +287,9 @@ impl WebdavClient {
                             continue; // the directory itself
                         }
                         if e.is_dir {
-                            dirs.push(e.rel_path);
+                            if visited.insert(e.rel_path.clone()) {
+                                dirs.push(e.rel_path);
+                            }
                         } else {
                             files.insert(e.rel_path, RemoteFile { etag: e.etag, size: e.size });
                         }

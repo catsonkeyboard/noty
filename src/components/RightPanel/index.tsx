@@ -12,6 +12,8 @@ type Heading = { level: number; text: string; pos: number | null };
 /** Headings from the live Tiptap doc (rich mode) or parsed markdown (source mode). */
 const useHeadings = (): Heading[] => {
   const editor = useEditorStore((s) => s.editor);
+  const activePath = useEditorStore((s) => s.activePath);
+  const loadCounter = useEditorStore((s) => s.loadCounter);
   const liveBody = useEditorStore((s) => s.liveBody);
   const [headings, setHeadings] = useState<Heading[]>([]);
 
@@ -31,7 +33,7 @@ const useHeadings = (): Heading[] => {
     return () => {
       editor.off("update", update);
     };
-  }, [editor]);
+  }, [editor, activePath, loadCounter]);
 
   // source mode: no editor instance, parse the markdown text
   useEffect(() => {

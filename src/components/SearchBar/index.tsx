@@ -55,15 +55,25 @@ const SearchBar = () => {
       setHits([]);
       return;
     }
+    let cancelled = false;
     timer.current = setTimeout(async () => {
       try {
         const results = await vaultApi.searchVault(vaultPath, query);
-        setHits(results);
-        setSelected(0);
+        if (!cancelled) {
+          setHits(results);
+          setSelected(0);
+        }
       } catch (e) {
-        console.error("search failed:", e);
+        if (!cancelled) {
+          console.error("search failed:", e);
+        }
       }
     }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      if (timer.current) clearTimeout(timer.current);
+    };
   }, [query, open, vaultPath]);
 
   const openHit = (hit: SearchHit) => {

@@ -78,7 +78,8 @@ const SettingsDialog = () => {
     if (typeof selected === "string" && selected !== vaultPath) {
       const { pendingFlush, closeAll } = useEditorStore.getState();
       if (pendingFlush) await pendingFlush();
-      closeAll();
+      await closeAll();
+      useVaultStore.setState({ expandedDirs: new Set(), tree: [] });
       await setVaultPath(selected);
     }
   };

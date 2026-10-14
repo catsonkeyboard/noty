@@ -57,7 +57,7 @@ pub async fn llm_stream(
     // cancel any stream still running and register our own token
     let token = CancellationToken::new();
     {
-        let mut guard = state.0.lock().unwrap();
+        let mut guard = state.0.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         if let Some(old) = guard.take() {
             old.cancel();
         }
@@ -104,7 +104,7 @@ async fn run_stream(
     }
 
     let mut stream = response.bytes_stream();
-    let mut buffer = String::new();
+    let mut byte_buf = Vec::new();
 
     loop {
         tokio::select! {
@@ -120,11 +120,12 @@ async fn run_stream(
                         return Err(e.to_string());
                     }
                     Some(Ok(bytes)) => {
-                        buffer.push_str(&String::from_utf8_lossy(&bytes));
-                        // SSE events are separated by a blank line
-                        while let Some(pos) = buffer.find("\n\n") {
-                            let event = buffer[..pos].to_string();
-                            buffer.drain(..pos + 2);
+                        byte_buf.extend_from_slice(&bytes);
+                        // SSE events are separated by a blank line (\n\n or \r\n\r\n)
+                        while let Some(pos) = byte_buf.windows(2).position(|w| w == b"\n\n") {
+                            let event_bytes = &byte_buf[..pos];
+                            let event = String::from_utf8_lossy(event_bytes).to_string();
+                            byte_buf.drain(..pos + 2);
                             for line in event.lines() {
                                 let Some(data) = line.strip_prefix("data:").map(str::trim_start) else {
                                     continue;
@@ -152,7 +153,7 @@ async fn run_stream(
 
 #[tauri::command]
 pub fn llm_cancel(state: State<'_, LlmState>) {
-    if let Some(token) = state.0.lock().unwrap().take() {
+    if let Some(token) = state.0.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).take() {
         token.cancel();
     }
 }
